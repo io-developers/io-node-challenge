@@ -18,3 +18,6 @@ coverage/
 .vscode
 
 dist/
+/.idea
+/.serverless
+.DS_Store

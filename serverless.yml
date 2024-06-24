@@ -1,0 +1,207 @@
+service: io-node-challenge
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: dev
+  environment:
+    CLOUDWATCH_LOG_GROUP: "/aws/lambda/${self:service}-${opt:stage, self:provider.stage}"
+    CLOUDWATCH_LOG_STREAM: "${self:service}-${opt:stage, self:provider.stage}-stream"
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:Query"
+      Resource:
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-users"
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-transactions"
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-activity"
+    - Effect: "Allow"
+      Action:
+        - "states:StartExecution"
+      Resource: "arn:aws:states:us-east-1:*:stateMachine:PaymentProcessStateMachine"
+    - Effect: "Allow"
+      Action:
+        - "ssm:GetParameter"
+      Resource:
+        - "arn:aws:ssm:${self:provider.region}:*:parameter/io-node-challenge/${self:provider.stage}/mockApiUrl"
+
+functions:
+  validateUser:
+    handler: dist/interfaces/controllers/validateUserController.validateUser
+    environment:
+      USERS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-users
+
+  executePayments:
+    handler: dist/interfaces/controllers/executePaymentsController.executePayment
+    environment:
+      TRANSACTIONS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-transactions
+      MOCK_API_URL: ${ssm:/io-node-challenge/${self:provider.stage}/mockApiUrl}
+
+  registerActivity:
+    handler: dist/interfaces/controllers/registerActivityController.registerActivityController
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionsTable
+              - StreamArn
+    environment:
+      ACTIVITY_TABLE: ${self:service}-${opt:stage, self:provider.stage}-activity
+
+  getTransaction:
+    handler: dist/interfaces/controllers/getTransactionController.getTransactionController
+    events:
+      - http:
+          path: transactions
+          method: get
+    environment:
+      TRANSACTIONS_TABLE: ${self:service}-${opt:stage, self:provider.stage}-transactions
+
+  startPaymentProcess:
+    handler: dist/interfaces/controllers/startPaymentProcessController.startPaymentProcessController
+    events:
+      - http:
+          path: payments
+          method: post
+    environment:
+      STATE_MACHINE_ARN: ${cf:${self:service}-${opt:stage, self:provider.stage}.PaymentProcessStateMachineArn}
+
+  mockPayment:
+    handler: dist/interfaces/controllers/mockPaymentController.mockPaymentController
+    events:
+      - http:
+          path: v1/mockPayment
+          method: post
+
+stepFunctions:
+  stateMachines:
+    PaymentProcessStateMachine:
+      name: PaymentProcessStateMachine
+      definition:
+        Comment: "A description of my state machine"
+        StartAt: ValidateUser
+        States:
+          ValidateUser:
+            Type: Task
+            Resource: !GetAtt ValidateUserLambdaFunction.Arn
+            Next: ExecutePayments
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                ResultPath: $.error
+                Next: FailState
+          ExecutePayments:
+            Type: Task
+            Resource: !GetAtt ExecutePaymentsLambdaFunction.Arn
+            End: true
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                ResultPath: $.error
+                Next: FailState
+          FailState:
+            Type: Fail
+            Cause: "State Machine Execution Failed"
+            Error: "An error occurred"
+      role: !GetAtt StepFunctionsExecutionRole.Arn
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${opt:stage, self:provider.stage}-users
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${opt:stage, self:provider.stage}-transactions
+        AttributeDefinitions:
+          - AttributeName: transactionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: transactionId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    ActivityTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${opt:stage, self:provider.stage}-activity
+        AttributeDefinitions:
+          - AttributeName: activityId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: activityId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    StepFunctionsExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Principal:
+                Service: 'states.amazonaws.com'
+              Action: 'sts:AssumeRole'
+        Policies:
+          - PolicyName: 'StepFunctionsExecutionPolicy'
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action:
+                    - 'lambda:InvokeFunction'
+                    - 'dynamodb:GetItem'
+                    - 'dynamodb:PutItem'
+                    - 'dynamodb:UpdateItem'
+                    - 'dynamodb:Query'
+                  Resource:
+                    - "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-validateUser"
+                    - "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-executePayments"
+                    - "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-registerActivity"
+                    - "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-getTransaction"
+                    - "arn:aws:lambda:us-east-1:*:function:${self:service}-${opt:stage, self:provider.stage}-mockPayment"
+                    - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-users"
+                    - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-transactions"
+                    - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${opt:stage, self:provider.stage}-activity"
+
+plugins:
+  - serverless-offline
+  - serverless-step-functions
+
+custom:
+  tableNames:
+    users: users-table
+    transactions: transactions-table
+    activity: activity-table

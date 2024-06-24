@@ -1,0 +1,44 @@
+{
+  "name": "io-node-challenge",
+  "version": "1.0.0",
+  "description": "## Descripción: Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:",
+  "main": ".eslintrc.js",
+  "scripts": {
+    "build": "tsc",
+    "serve": "tsc && sls offline",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "jest",
+    "dev": "nodemon",
+    "start": "sls offline",
+    "deploy": "sls deploy",
+    "deploy:dev": "sls deploy --stage dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "prettier": "^2.8.8",
+    "serverless": "^3.39.0",
+    "serverless-offline": "^13.6.0",
+    "serverless-step-functions": "^3.21.0",
+    "ts-jest": "^29.1.5",
+    "typescript": "^5.5.2"
+  },
+  "dependencies": {
+    "@types/aws-lambda": "^8.10.140",
+    "aws-sdk": "^2.1646.0",
+    "axios": "^1.7.2",
+    "http-status-codes": "^2.3.0",
+    "log4js": "^6.9.1",
+    "winston": "^3.13.0",
+    "winston-cloudwatch": "^6.3.0"
+  }
+}
