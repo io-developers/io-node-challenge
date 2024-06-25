@@ -1,26 +1,33 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import { apiGatewayHandler } from '../http/APIGatewayProxyHandler';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { TransactionService } from '../../application/services/TransactionService';
 import { TransactionRepository } from '../../domain/repositories/TransactionRepository';
-import { successResponse, errorResponse } from '../http/responseHandler';
-import { StatusCodes } from 'http-status-codes';
+import { BadRequestError } from '../../infrastructure/errors/BadRequestError';
+import dynamoDbClient from '../../infrastructure/database/DynamoDBClient';
+import { logger } from '../../infrastructure/utils/Logger';
 
-const transactionRepository = new TransactionRepository();
-const transactionService = new TransactionService(transactionRepository);
+const transactionRepository = new TransactionRepository(dynamoDbClient, logger);
+const transactionService = new TransactionService(
+  transactionRepository,
+  logger,
+);
 
-const getTransaction = async (event: APIGatewayProxyEvent, context: Context) => {
+const getTransaction = async (event: APIGatewayProxyEvent) => {
+  logger.info('Received request to get transaction', {
+    queryStringParameters: event.queryStringParameters,
+  });
+
   const transactionId = event.queryStringParameters?.transactionId;
 
   if (!transactionId) {
-    return errorResponse(StatusCodes.BAD_REQUEST, 'Transaction ID is required');
+    logger.error('Transaction ID is required but not provided');
+    throw new BadRequestError('Transaction ID is required');
   }
 
   const transaction = await transactionService.fetchTransaction(transactionId);
-  if (transaction) {
-    return successResponse(StatusCodes.OK, transaction);
-  } else {
-    return errorResponse(StatusCodes.NOT_FOUND, 'Transaction not found');
-  }
+  logger.info('Transaction retrieval successful', { transactionId });
+
+  return transaction;
 };
 
 export const getTransactionController = apiGatewayHandler(getTransaction);

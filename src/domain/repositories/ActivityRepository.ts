@@ -1,13 +1,19 @@
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { IActivityRepository } from './IActivityRepository';
 import { Activity } from '../models/Activity';
-import { logger } from '../../infrastructure/utils';
-import dynamoDbClient from '../../infrastructure/database/DynamoDBClient';
+import { ILogger } from '../../infrastructure/utils/ILogger';
 
 export class ActivityRepository implements IActivityRepository {
   private readonly tableName: string;
 
-  constructor() {
+  private readonly dynamoDbClient: DocumentClient;
+
+  private readonly logger: ILogger;
+
+  constructor(dynamoDbClient: DocumentClient, logger: ILogger) {
     this.tableName = process.env.ACTIVITY_TABLE || '';
+    this.dynamoDbClient = dynamoDbClient;
+    this.logger = logger;
   }
 
   async saveActivity(activity: Activity): Promise<void> {
@@ -16,7 +22,7 @@ export class ActivityRepository implements IActivityRepository {
       Item: activity,
     };
 
-    await dynamoDbClient.put(params).promise();
-    logger.info(`Activity saved: ${activity.activityId}`);
+    await this.dynamoDbClient.put(params).promise();
+    this.logger.info(`Activity saved: ${activity.activityId}`);
   }
 }

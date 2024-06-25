@@ -1,24 +1,32 @@
 module.exports = {
-    env: {
-        es2021: true,
-        node: true,
-    },
-    extends: [
-        'eslint:recommended',
-        'plugin:@typescript-eslint/recommended',
-        'airbnb-base',
-    ],
-    parser: '@typescript-eslint/parser',
-    parserOptions: {
-        ecmaVersion: 12,
-        sourceType: 'module',
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    project: './tsconfig.json',
+    tsconfigRootDir: __dirname,
+    sourceType: 'module'
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:prettier/recommended'
+  ],
+  plugins: ['@typescript-eslint', 'prettier'],
+  rules: {
+    '@typescript-eslint/no-unused-vars': ['error'],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    'prettier/prettier': 'error'
+  },
+  env: {
+    node: true,
+    es6: true
+  },
+  settings: {
+    'import/resolver': {
+      typescript: {
         project: './tsconfig.json',
+      },
     },
-    plugins: [
-        '@typescript-eslint',
-    ],
-    rules: {
-        semi: ['error', 'always'],
-        quotes: ['error', 'single'],
-    },
+  },
+  ignorePatterns: ['dist', 'node_modules']
 };

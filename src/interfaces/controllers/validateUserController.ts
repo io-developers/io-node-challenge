@@ -1,26 +1,24 @@
-import { apiGatewayHandler } from '../http/APIGatewayProxyHandler';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { UserService } from '../../application/services/UserService';
 import { UserRepository } from '../../domain/repositories/UserRepository';
-import { successResponse, errorResponse } from '../http/responseHandler';
-import { StatusCodes } from 'http-status-codes';
+import dynamoDbClient from '../../infrastructure/database/DynamoDBClient';
+import { BadRequestError } from '../../infrastructure/errors/BadRequestError';
 import { Transaction } from '../../domain/models/Transaction';
+import { logger } from '../../infrastructure/utils/Logger';
 
-const userRepository = new UserRepository();
-const userService = new UserService(userRepository);
+const userRepository = new UserRepository(dynamoDbClient, logger);
+const userService = new UserService(userRepository, logger);
 
-export const validateUser = async (transaction: Transaction, context: Context) => {
-  const userId = transaction.userId;
+export const validateUser = async (transaction: Transaction) => {
+  logger.info('Received validate user request', { transaction });
+  const { userId } = transaction;
 
   if (!userId) {
-    return errorResponse(StatusCodes.BAD_REQUEST, 'User ID is required');
+    logger.error('Validation Error: Missing userId');
+    throw new BadRequestError('User ID is required');
   }
 
-  const user = await userService.validateUser(userId);
-  if (user) {
-    return transaction;
-  } else {
-    return errorResponse(StatusCodes.NOT_FOUND, 'User not found');
-  }
+  await userService.validateUser(userId);
+  logger.info('User validation completed', { userId });
+
+  return transaction;
 };
-

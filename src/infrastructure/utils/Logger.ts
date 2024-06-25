@@ -1,4 +1,5 @@
 import log4js from 'log4js';
+import { ILogger } from './ILogger'; // Interfaz para el logger
 
 log4js.configure({
   appenders: {
@@ -9,6 +10,16 @@ log4js.configure({
   },
 });
 
-const logger = log4js.getLogger();
+const loggerInstance = log4js.getLogger();
 
-export default logger;
+class Logger implements ILogger {
+  info(message: string, meta?: any): void {
+    loggerInstance.info(message, meta);
+  }
+
+  error(message: string, meta?: any): void {
+    loggerInstance.error(message, meta);
+  }
+}
+
+export const logger = new Logger();

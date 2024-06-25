@@ -1,14 +1,20 @@
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { IUserRepository } from './IUserRepository';
 import { User } from '../models/User';
-import { logger } from '../../infrastructure/utils';
-import dynamoDbClient from '../../infrastructure/database/DynamoDBClient';
+import { ILogger } from '../../infrastructure/utils/ILogger';
 import { NotFoundError } from '../../infrastructure/errors/NotFoundError';
 
 export class UserRepository implements IUserRepository {
   private readonly tableName: string;
 
-  constructor() {
+  private readonly dynamoDbClient: DocumentClient;
+
+  private readonly logger: ILogger;
+
+  constructor(dynamoDbClient: DocumentClient, logger: ILogger) {
     this.tableName = process.env.USERS_TABLE || '';
+    this.dynamoDbClient = dynamoDbClient;
+    this.logger = logger;
   }
 
   async getUserById(userId: string): Promise<User | null> {
@@ -17,9 +23,9 @@ export class UserRepository implements IUserRepository {
       Key: { userId },
     };
 
-    const result = await dynamoDbClient.get(params).promise();
+    const result = await this.dynamoDbClient.get(params).promise();
     if (!result.Item) {
-      logger.info(`User not found: ${userId}`);
+      this.logger.info(`User not found: ${userId}`);
       throw new NotFoundError(`User with ID ${userId} not found`);
     }
     return result.Item as User;
@@ -31,7 +37,7 @@ export class UserRepository implements IUserRepository {
       Item: user,
     };
 
-    await dynamoDbClient.put(params).promise();
-    logger.info(`User created: ${user.userId}`);
+    await this.dynamoDbClient.put(params).promise();
+    this.logger.info(`User created: ${user.userId}`);
   }
 }

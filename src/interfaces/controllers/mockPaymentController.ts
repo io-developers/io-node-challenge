@@ -1,28 +1,18 @@
+import { APIGatewayProxyEvent } from 'aws-lambda';
 import { apiGatewayHandler } from '../http/APIGatewayProxyHandler';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import { successResponse, errorResponse } from '../http/responseHandler';
-import { StatusCodes } from 'http-status-codes';
+import { ValidationService } from '../../application/services/ValidationService';
+import { logger } from '../../infrastructure/utils/Logger';
 
-const processPayment = async (event: APIGatewayProxyEvent, context: Context) => {
-  if (!event.body) {
-    return errorResponse(StatusCodes.BAD_REQUEST, 'Request body is required');
-  }
+const validationService = new ValidationService();
 
-  let parsedBody: { transactionId: string, userId: string, amount: number };
+const processPayment = async (event: APIGatewayProxyEvent) => {
+  logger.info('Processing payment request', { event });
 
-  try {
-    parsedBody = JSON.parse(event.body);
-  } catch (error) {
-    return errorResponse(StatusCodes.BAD_REQUEST, 'Invalid JSON format');
-  }
+  const result = validationService.validatePaymentRequest(event.body);
 
-  const { transactionId, userId, amount } = parsedBody;
+  logger.info('Payment processed successfully', { result });
 
-  if (!transactionId || !userId || !amount) {
-    return errorResponse(StatusCodes.BAD_REQUEST, 'Invalid payment request');
-  }
-
-  return successResponse(StatusCodes.OK, { transactionId, userId, amount });
+  return result;
 };
 
 export const mockPaymentController = apiGatewayHandler(processPayment);
