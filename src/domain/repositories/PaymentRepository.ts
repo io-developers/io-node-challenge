@@ -1,7 +1,7 @@
 import { AxiosInstance } from 'axios';
 import { StatusCodes } from 'http-status-codes';
 import { IPaymentRepository } from './IPaymentRepository';
-import { ILogger } from '../../infrastructure/utils/ILogger'; // Nueva interfaz para logger
+import { ILogger } from '../../infrastructure/utils/ILogger';
 import { Transaction } from '../models/Transaction';
 import { BadRequestError } from '../../infrastructure/errors/BadRequestError';
 

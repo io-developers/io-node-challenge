@@ -1,5 +1,5 @@
 import log4js from 'log4js';
-import { ILogger } from './ILogger'; // Interfaz para el logger
+import { ILogger } from './ILogger';
 
 log4js.configure({
   appenders: {

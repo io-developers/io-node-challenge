@@ -3,6 +3,6 @@ import { AppError } from './AppError';
 
 export class BadRequestError extends AppError {
   constructor(message: string) {
-    super(message, StatusCodes.BAD_REQUEST); // O usa el código de estado que prefieras
+    super(message, StatusCodes.BAD_REQUEST);
   }
 }

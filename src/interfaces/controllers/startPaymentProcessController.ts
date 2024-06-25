@@ -7,7 +7,6 @@ import { TransactionRepository } from '../../domain/repositories/TransactionRepo
 import dynamoDbClient from '../../infrastructure/database/DynamoDBClient';
 import { logger } from '../../infrastructure/utils/Logger';
 
-// Instancia de los repositorios y el logger
 const paymentRepository = new PaymentRepository(axios, logger);
 const transactionRepository = new TransactionRepository(dynamoDbClient, logger);
 const paymentService = new PaymentService(
