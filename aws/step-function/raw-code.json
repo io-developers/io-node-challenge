@@ -1,0 +1,110 @@
+{
+  "Comment": "AWS Step Functions workflow for payment processing",
+  "StartAt": "ValidateUser",
+  "States": {
+    "ValidateUser": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "users",
+        "Key": {
+          "userId": {
+            "S.$": "$.userId"
+          },
+          "amount": {
+            "S.$": "$.amount"
+          }
+        }
+      },
+      "Next": "CheckUserValidation"
+    },
+    "CheckUserValidation": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Item",
+          "IsPresent": true,
+          "Next": "ExecutePayment"
+        },
+        {
+          "Variable": "$.Item",
+          "IsPresent": false,
+          "Next": "Fail"
+        }
+      ]
+    },
+    "ExecutePayment": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-1:905418407146:function:execute-payments",
+        "Payload": {
+          "userId.$": "$.Item.user.S"
+        }
+      },
+      "Next": "CheckPaymentSuccess",
+      "ResultPath": "$.lambdaResult"
+    },
+    "CheckPaymentSuccess": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.lambdaResult.Payload.paymentSuccess",
+          "BooleanEquals": true,
+          "Next": "TrackEvent"
+        },
+        {
+          "Variable": "$.lambdaResult.Payload.paymentSuccess",
+          "BooleanEquals": false,
+          "Next": "Fail"
+        }
+      ]
+    },
+    "TrackEvent": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Parameters": {
+        "TableName": "transactions",
+        "Item": {
+          "transactionId": {
+            "S.$": "$.lambdaResult.Payload.transactionId"
+          },
+          "userId": {
+            "S.$": "$.lambdaResult.Payload.userId"
+          },
+          "amount": {
+            "N.$": "$.lambdaResult.Payload.amount"
+          },
+          "timestamp": {
+            "S.$": "$$.State.EnteredTime"
+          }
+        }
+      },
+      "Next": "FormatSuccessResponse"
+    },
+    "FormatSuccessResponse": {
+      "Type": "Pass",
+      "Result": {
+        "statusCode": 201,
+        "body": {
+          "message": "Payment registered successfully",
+          "transactionId.$": "$.lambdaResult.Payload.transactionId"
+        }
+      },
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Fail": {
+      "Type": "Pass",
+      "Result": {
+        "statusCode": 400,
+        "body": {
+          "message": "Something was wrong"
+        }
+      },
+      "End": true
+    }
+  }
+}

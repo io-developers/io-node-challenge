@@ -1,20 +1,2 @@
-.terraform/
-.shelltool/
-makefiles/
-passwd
-
-.npm/
-.esbuild/
-.serverlessrc
-.npmrc
-.config/
-.yarn/
-.cache/
-node_modules
-**/node_modules
-.dccache
-.env
-coverage/
-.vscode
-
-dist/
+#ignore all folder node_modules
+aws/lambda/**/node_modules/

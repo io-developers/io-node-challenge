@@ -1,123 +1,262 @@
-# Reto técnico iO - Backend
+# **Node IO Challenge**
 
-## Descripción:
-Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:
+El reto consta de componentes en AWS:
 
-### Diagrama 1:
-![Diagrama 1](images/post.png)
-Este API debe de llamar a un Step Function el cual debe:
-- Validar el id de usuario comparándolo en la tabla **users**
-- En caso el usuario exista, un lambda llamado **execute-payments** debe llamar a un API Mock que el postulante debe crear, el cual debe de regresar una transacción exitosa
-- Si la transacción es exitosa, debe de grabarse un registro en la tabla **transactions**
-- Al terminar todo de forma exitosa, debe dar una respuesta satisfactoria que contenga el id de la transacción
+- Node Projects
+- AWS Lambda
+- AWS DynamoDB
+- AWS Step Functions
+- AWS API Gateway
+- Conclusiones
 
-Nota: En el momento que se interactúa con la tabla **transactions**, un stream de DynamoDB debe activar el lambda **register-activity**, el cual debe de guardar un registro del suceso en la tabla **activity**
+## Node Projects
 
-### Diagrama 2:
-![Diagrama 2](images/get.png)
-Este API debe de llamar a un Lambda Function la cual debe:
-- Consultar por el id de transacción desde el lambda **get-transaction** en la tabla **transactions**
-- En caso la transacción exista, debe de regresar el registro de la transacción
-- En caso la transacción no exista, debe de regresar una respuesta con el mensaje "Usuario no encontrado"
+1. Proyecto "activity", este consta segun la arquitectura propuesta escuchar un trigger stream de DynamaDB especificamente a la tabla **transactions**
 
-## Consideraciones:
+> Instalación de packages:
+>
+> ```bash
+> npm install
+> ```
+>
+> Comprobación de test:
+>
+> ```bash
+> npm run test
+> ```
+>
+> Comprobación de formateador
+>
+> ```bash
+> npm run lint
+> ```
 
-Obligatorio : 
-1. Respetar el arquetipo 
-2. Construir pruebas unitarias
-3. Buenas Prácticas (SOLID, Clean Code, etc)
+2. Proyecto "execute-payments", este consta segun la arquitectura propuesta emular un pago, este devuelve un true or false, y con ello determinar el flujo si continua o se debe retornar una respuesta que no procedio el flujo
 
-Deseable: 
-1. Crear los componentes con IaC (Terraform, Cloudformation)
-2. Logs usando CloudWatch
-3. Formatters / Linters
+> Instalación de packages:
+>
+> ```bash
+> npm install
+> ```
+>
+> Comprobación de test:
+>
+> ```bash
+> npm run test
+> ```
+>
+> Comprobación de formateador
+>
+> ```bash
+> npm run lint
+> ```
 
-## Anexos:
+3. Proyecto "get-transactions", este consta segun la arquitectura propuesta consulta si existe dicho **transactionId** en la tabla **transactions** ubicado en la base de datos DynamoDB
 
-### POST /v1/payments
+> Instalación de packages:
+>
+> ```bash
+> npm install
+> ```
+>
+> Comprobación de test:
+>
+> ```bash
+> npm run test
+> ```
+>
+> Comprobación de formateador
+>
+> ```bash
+> npm run lint
+> ```
 
-Payload
+## AWS Lambda Functions
+
+1. Creación de AWS Lambda "execute-payments", deployar o subirlo el folder `/aws/lambda/execute-payments`
+
+   ![1719604359789](image/README/1719604359789.png)
+
+2. Creación de AWS Lambda "register-activity", deployar o subir el folder `/aws/lambda/activity`, este a diferencia del lambda en el punto numero 1, tiene un activador que en este caso es DynamoDB
+
+   ![1719604462371](image/README/1719604462371.png)
+
+3. Creación de AWS Lambda "get-transactions", deployar o subir el folder `/aws/lambda/get-transactions`, este function debe ser configurado con un VPC para que tenga comunicación con DynamoDB de manera privada
+
+   ![1719614984845](image/README/1719614984845.png)
+
+   ![1719614969715](image/README/1719614969715.png)
+
+## AWS DynamoDB
+
+1. Crear tablas "activity","transactions","users" con las siguentes estructuras:
+
+   ```json
+   // table users
+   {
+     "userId": "string", // partition key
+     "name":"string",
+     "lastName":"string"
+   }
+   // table transactions
+   {
+     "transactionsId": "string", // partition key
+     "userId":"string",
+     "amount":"string"
+   }
+   // table activity
+   {
+     "activityId": "string", // partition key
+     "transactionId":"string"
+   }
+
+   ```
+
+![1719603058962](image/README/1719603058962.png)
+
+2. Ahora para escuchar triggers en la tabla "transactions", debemos activar el componente DynamoDB Stream, y asignar como trigger el recurso AWS Lambda llamado "register-activity"
+
+   ![1719603339279](image/README/1719603339279.png)
+
+   ![1719603362519](image/README/1719603362519.png)
+
+3. Asignar VPC a la base de datos
+
+![1719615060961](image/README/1719615060961.png)
+
+![1719615075141](image/README/1719615075141.png)
+
+## AWS Step Functions
+
+1. Crear componente en AWS step function, en este caso llamaremos al compoente "workflow-payments"
+
+![1719596236977](image/README/1719596236977.png)
+
+2. Ingresar y editar la configuración mediante el json ubicado en el path `/aws/step-function/raw-code.json` y guardamos con el boton "Save"
+
+![1719615222016](image/README/1719615222016.png)
+
+3. Asignar permisos necesarios para al rol creado por defecto al step function "workflow-payments"
+
+![1719596627671](image/README/1719596627671.png)
+
 ```json
+// CloudWatchLogsDeliveryFullAccessPolicy-745dd9fe-681a-4c3e-8174-2586c3d90f8c
 {
-    "userId": "f529177d-0521-414e-acd9-6ac840549e97",
-    "amount": 30
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups"
+            ],
+            "Resource": "*"
+        }
+    ]
 }
-```
 
-Respusta OK (201)
-```json
+// DynamoDBTableContentScopedAccessPolicy-483d7349-d8b9-45d3-ae5d-4602e5785a06
 {
-    "message": "Payment registered successfully",
-    "transactionId": "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:905418407146:table/transactions",
+                "arn:aws:dynamodb:us-east-1:905418407146:table/users"
+            ]
+        }
+    ]
 }
-```
 
-Respuesta errada (400)
-```json
+// permission-to-execute-components
+
 {
-    "message": "Something was wrong"
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"dynamodb:GetItem",
+				"dynamodb:PutItem"
+			],
+			"Resource": [
+				"arn:aws:dynamodb:us-east-1:905418407146:table/users",
+				"arn:aws:dynamodb:us-east-1:905418407146:table/transactions"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"lambda:InvokeFunction"
+			],
+			"Resource": "arn:aws:lambda:us-east-1:905418407146:function:execute-payments"
+		}
+	]
 }
-```
 
-### GET /v1/transactions
 
-Query params
-```
-transactionId: "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
-```
+// XRayAccessPolicy-46b78b73-607a-40fe-bde1-cdd4f25e12c8
 
-Respusta OK (200)
-```json
 {
-    "transactionId": "8db0a6fc-ad42-4974-ac1f-36bb90730afe",
-    "userId": "f529177d-0521-414e-acd9-6ac840549e97",
-    "paymentAmount": 30
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
 }
+
 ```
 
-Respuesta errada (404)
-```json
-{
-    "message": "Transaction not found"
-}
-```
+## AWS API Gateway
 
-### Tabla users:
+1. Creación de nueva API con el prefijo "v1" y dentro de ello creamos los siguientes metodos `{api}/payments` & `{api}/transactions?{transactionId}`
 
-La tabla users debe de contener datos de los usuarios que pueden realizar una transacción.
+   ![1719615318701](image/README/1719615318701.png)
 
-<dl>
-    <dt>Esquema:</dt>
-    <dd>userId (string - partition key)</dd>
-    <dd>name (string)</dd>
-    <dd>lastName (string)</dd>
-</dl>
+2. Ingresar a la API y crear 2 recursos ` /payments` & `/transactions`
 
-La tabla debe de tener el siguiente contenido:
-| userId      | name | lastName |
-| ----------- | ----------- | ----------- |
-| f529177d-0521-414e-acd9-6ac840549e97      | Pedro       | Suarez       |
-| 15f1c60a-2833-49b7-8660-065b58be2f89   | Andrea        | Vargas        |
+   ![1719615510578](image/README/1719615510578.png)
 
-### Tabla transactions:
+3. Ahora configurar el metodo POST de `/payments`
 
-<dl>
-    <dt>Esquema:</dt>
-    <dd>transactionId (partition key)</dd>
-    <dd>userId</dd>
-    <dd>amount</dd>
-</dl>
+   ![1719615578935](image/README/1719615578935.png)
 
-### Tabla activity:
+4. Ahora configurar metodo GET para `/transactions`
 
-<dl>
-    <dt>Esquema:</dt>
-    <dd>activityId (partition key)</dd>
-    <dd>transactionId</dd>
-    <dd>date</dd>
-</dl>
+   ![1719615631981](image/README/1719615631981.png)
 
-## Send us your challenge
-Cuando termines el reto, luego de forkear el repositorio, debes crear un pull request to our repository indicando en la descripción de este tu nombre y correo.
+## Conclusiones
 
-### Tiempo de resolución: 3 días
+Este proyecto ha sido una experiencia enriquecedora que me ha permitido profundizar en diversos servicios de AWS y mejorar mis habilidades en desarrollo con Node.js. A través de la implementación de esta arquitectura, he podido comprobar mi capacidad para resolver problemas complejos y trabajar con tecnologías modernas de cloud computing.
+
+La integración de servicios como Lambda, DynamoDB, Step Functions y API Gateway ha sido un reto estimulante 👽👽👽👽.
+
+Estoy profundamente agradecido por la oportunidad de haber realizado este challenge.
+
+![1719616887040](image/README/1719616887040.jpg)
+
+> Este es el README.md completo con la conclusión añadida al final en formato Markdown. La conclusión expresa gratitud, satisfacción por el logro, y el impacto positivo que el proyecto ha tenido en tu desarrollo profesional y personal.
