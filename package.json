@@ -1,0 +1,18 @@
+{
+  "name": "io-node-challenge",
+  "version": "1.0.0",
+  "description": "## Descripción: Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:",
+  "main": "dist/lambda.js",
+  "scripts": {
+    "build": "esbuild src/lambda.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/lambda.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@types/aws-lambda": "^8.10.140",
+    "esbuild": "^0.21.5"
+  }
+}
