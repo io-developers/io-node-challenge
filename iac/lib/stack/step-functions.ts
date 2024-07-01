@@ -25,14 +25,6 @@ export class StepFunctions {
       lambdaFunction: props.processPaymentFunction,
       outputPath: '$.Payload',
     });
-
-    const retrieveOriginalPayloadTask = new sfn.Pass(scope, 'Modify Payment Result', {
-      parameters: {
-        'userId.$': '$.Payload.userId',
-        'amount.$': '$.Payload.amount',
-      },
-      resultPath: '$.Payload',
-    });
   
     const userExistsChoice = new sfn.Choice(scope, 'User Exists?')
       .when(sfn.Condition.isPresent('$.Result.Item'), processPaymentTask)
@@ -42,7 +34,7 @@ export class StepFunctions {
       }));
 
     this.paymentStateMachine = new sfn.StateMachine(scope, 'PaymentStateMachine', {
-      definition: checkUserTask.next(retrieveOriginalPayloadTask).next(userExistsChoice),
+      definition: checkUserTask.next(userExistsChoice),
     });
   }
 }
