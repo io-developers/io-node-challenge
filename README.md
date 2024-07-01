@@ -1,5 +1,8 @@
 # Reto técnico iO - Backend
 
+## Solución:
+[SOLUTION.md](SOLUTION.md)
+
 ## Descripción:
 Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:
 
