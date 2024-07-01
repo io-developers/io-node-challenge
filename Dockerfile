@@ -12,10 +12,15 @@ COPY . .
 
 RUN npm run build
 
-# --------- Lambda Image ---------
+# --------- Runtime Image ---------
 FROM public.ecr.aws/lambda/nodejs:20 AS runtime
+
+ENV LAMBDA_TASK_ROOT=/var/task
+
 WORKDIR ${LAMBDA_TASK_ROOT}
 
 COPY --from=builder /usr/app/dist/* ./
 
-CMD ["lambda.handler"]
+EXPOSE 8080
+
+CMD ["lambda.executePaymentHandler"]

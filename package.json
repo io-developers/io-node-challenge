@@ -4,6 +4,8 @@
   "description": "## Descripción: Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:",
   "main": "dist/lambda.js",
   "scripts": {
+    "start": "node dist/lambda.js",
+    "dev": "esbuild src/lambda.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/lambda.js --watch",
     "build": "esbuild src/lambda.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/lambda.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,6 +15,11 @@
   "devDependencies": {
     "@tsconfig/node20": "^20.1.4",
     "@types/aws-lambda": "^8.10.140",
+    "@types/node": "^20.14.9",
     "esbuild": "^0.21.5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.606.0",
+    "ajv": "^8.16.0"
   }
 }

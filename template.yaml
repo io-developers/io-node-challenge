@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless App
+
+Globals:
+  Function:
+    Timeout: 15
+
+Resources:
+  CheckUserFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: dist/lambda.checkUserHandler
+      Runtime: nodejs20.x
+      CodeUri: .
+      Environment:
+        Variables:
+          USER_TABLE: !Ref USER_TABLE
+      Events:
+        CheckUserApi:
+          Type: Api 
+          Properties:
+            Path: /checkuser
+            Method: post
+
+  ProcessPaymentFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: dist/lambda.executePaymentHandler
+      Runtime: nodejs20.x
+      CodeUri: .
+      Environment:
+        Variables:
+          TRANSACTION_TABLE: !Ref TRANSACTION_TABLE
+      Events:
+        ProcessPaymentApi:
+          Type: Api 
+          Properties:
+            Path: /processpayment
+            Method: post
+
+Outputs:
+  CheckUserApi:
+    Description: URL del API para verificar usuario
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/checkuser/"
+  ProcessPaymentApi:
+    Description: URL del API para procesar pagos
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/processpayment/"

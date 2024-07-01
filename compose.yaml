@@ -12,14 +12,12 @@ services:
     build:
       context: .
       target: runtime
-    environment:
-      NODE_ENV: production
+    env_file:
+      - .env
     ports:
       - 9000:8080
-  server:
-    build:
-      context: .
-    environment:
-      NODE_ENV: production
-    ports:
-      - 8080:8080
+    develop:
+      watch:
+        - action: rebuild
+          path: ./dist/lambda.js
+          target: /var/task/lambda.js
