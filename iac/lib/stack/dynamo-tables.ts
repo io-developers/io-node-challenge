@@ -1,5 +1,6 @@
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
+import { Lambdas } from './lambdas';
 
 export class DynamoTables {
   public readonly activityTable: dynamodb.Table;
@@ -22,5 +23,12 @@ export class DynamoTables {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     });
+  }
+
+  grantPermissions(lambdas: Lambdas) {
+    this.activityTable.grantReadWriteData(lambdas.processPaymentFunction);
+    this.activityTable.grantReadWriteData(lambdas.registerActivityFunction);
+    this.transactionsTable.grantReadWriteData(lambdas.processPaymentFunction);
+    this.usersTable.grantReadData(lambdas.getUserFunction);
   }
 }

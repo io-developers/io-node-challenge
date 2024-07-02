@@ -7,9 +7,9 @@ import { CheckUserRequest } from './infra/CheckUserRequest';
 
 const dynamodb = new DynamoDBClient();
 
-export const checkUserHandler = async (event: APIGatewayEvent, _: Context): Promise<APIGatewayProxyResult> => {
+export const getUserHandler = async (event: APIGatewayEvent, _: Context): Promise<APIGatewayProxyResult> => {
     try {
-      const params = CheckUserRequest.parse(event.body ?? '{}');
+      const params = CheckUserRequest.parse(JSON.stringify(event.queryStringParameters ?? {}));
       const repo = new DynamoUserRepo(dynamodb, process.env.USER_TABLE ?? 'users');
       const query = new FindUserQuery({ userId: params.userId });
       const findQueryHandler = new FindUserQueryHandler(repo);

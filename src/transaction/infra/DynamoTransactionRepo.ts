@@ -38,8 +38,6 @@ export class DynamoTransactionRepo extends TransactionRepository {
       transactionId: result.Item.transactionId.S,
       userId: result.Item.userId.S,
       amount: parseFloat(result.Item.amount.N ?? "0"),
-      createdAt: result.Item.createdAt.S ? new Date(result.Item.createdAt.S) : new Date(),
-      updatedAt: result.Item.updatedAt.S ? new Date(result.Item.updatedAt.S) : new Date(),
     };
   }
 

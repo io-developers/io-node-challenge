@@ -27,8 +27,21 @@ export class EventPublisher {
   async publish(event: EventDomain): Promise<void> {
     Logger.info(`Publishing event: ${event.constructor.name}`);
 
-    const tasks = this.eventHandlers[event.constructor.name].map((handler) => () => handler.handle(event));
+    const events = this.eventHandlers[event.constructor.name];
 
-    await Promise.allSettled(tasks.map((task) => task()));
+    if (!events || !Array.isArray(events) || events.length === 0) {
+      return;
+    }
+
+    const tasks = events.map((handler) => () => handler.handle(event));
+
+    Logger.info(`Publishing event: ${event.constructor.name}`);
+
+    try {
+      await Promise.allSettled(tasks.map((task) => task()));
+    } catch (e) {
+      Logger.error(`Failed to publish event: ${event.constructor.name}`);
+      Logger.error(e);
+    }
   } 
 } 

@@ -7,10 +7,10 @@ export class PaymentProcessorSdk {
   ) {}
 
   async processPayment (params: { userId: string; amount: number }): Promise<boolean> {
-    Logger.info(`[MockPaymentProcessorSdk] Processing payment for user [${params.userId}`);
+    Logger.info(`[PaymentProcessorSdk] Processing payment for user [${params.userId}`);
 
     try {
-      await this.httpApi.post('/payment', params);
+      await this.httpApi.post('/v1/payment-processor', params);
 
       return true;
     } catch {

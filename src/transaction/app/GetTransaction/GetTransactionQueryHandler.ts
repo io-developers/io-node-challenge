@@ -1,10 +1,10 @@
-import { ok } from "assert";
 import { QueryHandler } from "../../../shared/QueryHandler";
 import { Result } from "../../../shared/Result";
 import { Transaction } from "../../domain/Transaction";
 import { TransactionNotFound } from "../../domain/TransactionNotFound";
 import { TransactionRepository } from "../../domain/TransactionRepo";
 import { GetTransactionQuery } from "./GetTransactionQuery";
+import { Logger } from "../../../shared/Logger";
 
 export class GetTransactionQueryHandler implements QueryHandler<Result<Transaction, TransactionNotFound>> {
   constructor(
@@ -21,7 +21,16 @@ export class GetTransactionQueryHandler implements QueryHandler<Result<Transacti
         ok: transaction,
         err: null
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof TransactionNotFound) {
+        return {
+          ok: null,
+          err: new TransactionNotFound(query.getTransactionId())
+        }
+      }
+
+      Logger.error(e);
+
       return {
         ok: null,
         err: new TransactionNotFound(query.getTransactionId())

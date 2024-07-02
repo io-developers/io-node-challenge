@@ -1,6 +1,6 @@
 import type { APIGatewayEvent, APIGatewayProxyResultV2 } from "aws-lambda";
 
-export const mockPaymentHandler = async (_: APIGatewayEvent): Promise<APIGatewayProxyResultV2> => {
+export const paymentProcessorHandler = async (_: APIGatewayEvent): Promise<APIGatewayProxyResultV2> => {
   return {
     statusCode: 200,
     body: JSON.stringify({
@@ -12,5 +12,4 @@ export const mockPaymentHandler = async (_: APIGatewayEvent): Promise<APIGateway
 export { registerActivityHandler } from './activity/activity.handler';
 export { executePaymentHandler } from './transaction/transaction.handler';
 export { getTransactionsHandler } from './transaction/transaction.handler';
-export { checkUserHandler } from './user/user.handler';
-
+export { getUserHandler } from './user/user.handler';

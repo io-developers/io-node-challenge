@@ -1,17 +1,17 @@
 export class Logger {
-  static log(message: string): void {
+  static log(message: unknown): void {
     console.log(message);
   }
 
-  static error(message: string): void {
+  static error(message: unknown): void {
     console.error(message);
   }
 
-  static warn(message: string): void {
+  static warn(message: unknown): void {
     console.warn(message);
   }
 
-  static info(message: string, ctx?: unknown): void {
+  static info(message: unknown, ctx?: unknown): void {
     console.info(message, ctx);
   }
 }

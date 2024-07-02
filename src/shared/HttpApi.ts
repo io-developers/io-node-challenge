@@ -22,8 +22,12 @@ export class HttpApi {
   }
 
   async post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+
+    Logger.info(`[HttpApi] POST ${url}`);
+
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: this.headers,
         body: JSON.stringify(body),
@@ -33,13 +37,13 @@ export class HttpApi {
         throw new Error('Request failed');
       }
     
-      Logger.info(`[HttpApi] POST ${path} ${response.status} ${response.statusText}`);
+      Logger.info(`[HttpApi] SUCCESS RESPONSE ${response.statusText} ${response.status}`);
 
       return response.json() as T;
     } catch (error) {
       const err = error as Error;
 
-      Logger.error(`[HttpApi] POST ${path} failed. Details: ${err.message}`);
+      Logger.error(`[HttpApi] ERROR RESPONSE - ${err.message}`);
 
       throw error;
     }

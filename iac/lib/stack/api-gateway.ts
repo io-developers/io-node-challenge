@@ -2,37 +2,35 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { StateMachine } from 'aws-cdk-lib/aws-stepfunctions';
-import { Role, ServicePrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Role} from 'aws-cdk-lib/aws-iam';
 
 type ApiGatewayProps = {
   getTransactionsHandler: lambda.Function;
+  getUserHandler: lambda.Function;
   paymentProcessor: lambda.Function;
   stateMachine: StateMachine;
 }
 
 export class ApiGateway {
-  constructor(scope: Construct, props: ApiGatewayProps) {
-    const api = new apigateway.RestApi(scope, 'PaymentsApi', {
+  public readonly api: apigateway.RestApi;
+
+  constructor(scope: Construct) {
+    this.api = new apigateway.RestApi(scope, 'PaymentsApi', {
       restApiName: 'Payments Service',
       deployOptions: {
         stageName: 'dev',
       }
     });
+  }
 
-    const role = new Role(scope, 'ApiGatewayStepFunctionsRole', {
-      assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
-    });
-
-    role.addToPolicy(new PolicyStatement({
-      actions: ['states:StartSyncExecution'],
-      resources: [props.stateMachine.stateMachineArn],
-    }));
-
-    const v1 = api.root.addResource('v1');
+  setupApiGateway(role: Role, props: ApiGatewayProps) {
+    const v1 = this.api.root.addResource('v1');
     const paymentProcessor = v1.addResource('payment-processor');
     const payments = v1.addResource('payments');
     const transactions = v1.addResource('transactions');
-    const integration = new apigateway.AwsIntegration({
+    const users = v1.addResource('users');
+
+    payments.addMethod('POST', new apigateway.AwsIntegration({
       service: 'states',
       action: 'StartSyncExecution',
       options: {
@@ -47,9 +45,7 @@ export class ApiGateway {
           statusCode: '200',
         }],
       },
-    });
-
-    payments.addMethod('POST', integration, {
+    }), {
       methodResponses: [{
         statusCode: '200',
       }],
@@ -62,6 +58,12 @@ export class ApiGateway {
     });
 
     transactions.addMethod('GET', new apigateway.LambdaIntegration(props.getTransactionsHandler), {
+      methodResponses: [{
+        statusCode: '200',
+      }],
+    });
+
+    users.addMethod('GET', new apigateway.LambdaIntegration(props.getUserHandler), {
       methodResponses: [{
         statusCode: '200',
       }],

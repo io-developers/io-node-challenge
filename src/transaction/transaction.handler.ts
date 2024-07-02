@@ -15,7 +15,7 @@ const dynamodb = new DynamoDBClient();
 
 export const getTransactionsHandler = async (event: APIGatewayEvent, _: Context): Promise<APIGatewayProxyResult> => {
   const params = GetTransactionRequest.parse(event.queryStringParameters ?? {});
-  const repo = new DynamoTransactionRepo(dynamodb, process.env.USER_TABLE ?? 'users');
+  const repo = new DynamoTransactionRepo(dynamodb, process.env.TRANSACTION_TABLE ?? 'transactions');
   const query = new GetTransactionQuery(params);
   const transactionQueryHandler = new GetTransactionQueryHandler(repo);
 
@@ -40,7 +40,7 @@ export const executePaymentHandler = async (event: APIGatewayEvent, _: Context):
     try {
       const payload = PaymentTransactionRequest.parse(event.body ?? '{}');
       const http = new HttpApi({
-        baseUrl: process.env.PAYMENT_PROCESSOR_URL ?? 'http://localhost:3000',
+        baseUrl: process.env.PAYMENT_PROCESSOR_URL ?? '',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -50,7 +50,6 @@ export const executePaymentHandler = async (event: APIGatewayEvent, _: Context):
         EventPublisher.getInstance(),
         new PaymentProcessorSdk(http),
         new DynamoTransactionRepo(dynamodb, process.env.TRANSACTION_TABLE ?? 'transactions'),
-
       );
     
       const command = new ProcessPaymentCommand({
