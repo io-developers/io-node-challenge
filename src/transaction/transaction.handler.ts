@@ -10,30 +10,42 @@ import { GetTransactionQuery } from './app/GetTransaction/GetTransactionQuery';
 import { GetTransactionQueryHandler } from './app/GetTransaction/GetTransactionQueryHandler';
 import { HttpApi } from '../shared/HttpApi';
 import { EventPublisher } from '../shared/EventPublisher';
+import { Logger } from '../shared/Logger';
 
 const dynamodb = new DynamoDBClient();
 
 export const getTransactionsHandler = async (event: APIGatewayEvent, _: Context): Promise<APIGatewayProxyResult> => {
-  const params = GetTransactionRequest.parse(event.queryStringParameters ?? {});
-  const repo = new DynamoTransactionRepo(dynamodb, process.env.TRANSACTION_TABLE ?? 'transactions');
-  const query = new GetTransactionQuery(params);
-  const transactionQueryHandler = new GetTransactionQueryHandler(repo);
-
-  const { ok, err } = await transactionQueryHandler.handle(query);
-
-  if (err) {
+  try {
+    const params = GetTransactionRequest.parse(event.queryStringParameters ?? {});
+    const repo = new DynamoTransactionRepo(dynamodb, process.env.TRANSACTION_TABLE ?? 'transactions');
+    const query = new GetTransactionQuery(params);
+    const transactionQueryHandler = new GetTransactionQueryHandler(repo);
+  
+    const { ok, err } = await transactionQueryHandler.handle(query);
+  
+    if (err) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: err.message,
+        }),
+      };
+    }
+  
     return {
-      statusCode: 400,
+      statusCode: 200,
+      body: JSON.stringify(ok),
+    };
+  } catch (error) {
+    Logger.error(error);
+
+    return {
+      statusCode: 500,
       body: JSON.stringify({
-        message: err.message,
+        message: `Failed to get transactions. Details: ${(error as Error).message}`
       }),
     };
   }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(ok),
-  };
 };
 
 export const executePaymentHandler = async (event: APIGatewayEvent, _: Context): Promise<APIGatewayProxyResult> => {
@@ -73,11 +85,13 @@ export const executePaymentHandler = async (event: APIGatewayEvent, _: Context):
         body: JSON.stringify(ok),
       };
     } catch (err) {
+      Logger.error(err);
+
       return {
         statusCode: 500,
         body: JSON.stringify({
-          message: (err as Error).message,
+          message: `Failed to process payment. Details: ${(err as Error).message}`
         }),
       };
     }
-};
+}

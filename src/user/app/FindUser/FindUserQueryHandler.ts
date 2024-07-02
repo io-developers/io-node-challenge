@@ -1,3 +1,4 @@
+import { Logger } from "../../../shared/Logger";
 import { QueryHandler } from "../../../shared/QueryHandler";
 import { Result } from "../../../shared/Result";
 import { User } from "../../domain/User";
@@ -18,11 +19,17 @@ export class FindUserQueryHandler implements QueryHandler<Result<User, UserNotFo
         ok: user,
         err: null
       }
-    } catch {
-      return {
-        ok: null,
-        err: new UserNotFound({ userId: query.getUserId() })
+    } catch (e) {
+      if (e instanceof UserNotFound) {
+        return {
+          ok: null,
+          err: new UserNotFound({ userId: query.getUserId() })
+        }
       }
+
+      Logger.error(e);
+
+      throw e;
     }
   }
 }

@@ -4,6 +4,7 @@ import { FindUserQuery } from './app/FindUser/FindUserQuery';
 import { FindUserQueryHandler } from './app/FindUser/FindUserQueryHandler';
 import { DynamoUserRepo } from './infra/DynamoUserRepo';
 import { CheckUserRequest } from './infra/CheckUserRequest';
+import { Logger } from '../shared/Logger';
 
 const dynamodb = new DynamoDBClient();
 
@@ -32,10 +33,12 @@ export const getUserHandler = async (event: APIGatewayEvent, _: Context): Promis
         }),
       };
     } catch (error) {
+      Logger.error(error);
+
       return {
         statusCode: 500,
         body: JSON.stringify({
-          message: (error as Error).message,
+          message: `Failed to get user. Details: ${(error as Error).message}`
         }),
       };
     }

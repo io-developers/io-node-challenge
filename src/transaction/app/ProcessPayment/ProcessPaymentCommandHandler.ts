@@ -8,6 +8,7 @@ import { ProcessPaymentCommand } from "./ProcessPaymentCommand";
 import { PaymentProcessorSdk } from "../../infra/PaymentProcessorSdk";
 import { EventPublisher } from "../../../shared/EventPublisher";
 import { TransactionCreated } from "../../domain/TransactionCreated";
+import { Logger } from "../../../shared/Logger";
 
 export class ProcessPaymentCommandHandler implements CommandHandler<Result<Transaction, TransactionFailed>> {
   constructor(
@@ -46,12 +47,16 @@ export class ProcessPaymentCommandHandler implements CommandHandler<Result<Trans
         err: null
       }
     } catch (e) {
-      const err = e as Error;
+      const err = <Error> e;
 
-      return {
-        ok: null,
-        err: new TransactionFailed(`Failed to process payment. Details: ${err.message}`)
+      if (e instanceof TransactionFailed) {
+        return {
+          ok: null,
+          err: new TransactionFailed(`Failed to process payment. Details: ${err.message}`)
+        }
       }
+
+      throw e;
     }
   }
 }

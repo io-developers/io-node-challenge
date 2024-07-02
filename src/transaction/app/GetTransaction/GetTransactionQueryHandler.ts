@@ -31,10 +31,7 @@ export class GetTransactionQueryHandler implements QueryHandler<Result<Transacti
 
       Logger.error(e);
 
-      return {
-        ok: null,
-        err: new TransactionNotFound(query.getTransactionId())
-      }
+      throw e;
     }
   }
 }
