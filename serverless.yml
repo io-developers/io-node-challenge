@@ -1,0 +1,165 @@
+org: estevanjj
+app: io-node-challenge
+service: io-node-challenge
+
+plugins:
+  - serverless-step-functions
+
+custom:
+  environment: ${opt:stage, self:provider.stage}
+  version: v1
+
+stages:
+  default:
+    params:
+      tableName: "users-table-${sls:stage}"
+      tableTransactionName: "transactions-table-${sls:stage}"
+
+stepFunctions:
+  stateMachines:
+    TransacctionStateMachine:
+      name: ${self:custom.environment}-step-transacction
+      definition:
+        Comment: "transacction handler"
+        StartAt: ValidUser
+        States:
+          #Validar el id de usuario comparándolo en la tabla users
+          ValidUser:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [validUserFunction, Arn]
+            Next: executePayments
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                MaxAttempts: 3
+                IntervalSeconds: 30
+                BackoffRate: 2
+          #En caso el usuario exista, un lambda llamado execute-payments debe llamar a un API Mock que el postulante debe crear, el cual debe de regresar una transacción exitosa
+          executePayments:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [transactionFunction, Arn]
+            Next: SaveTransaction
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                MaxAttempts: 3
+                IntervalSeconds: 30
+                BackoffRate: 2
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: GetDefaultRetention
+                ResultPath: "$.catch_error"
+          #Si la transacción es exitosa, debe de grabarse un registro en la tabla transactions
+          SaveTransaction:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [saveTransacctionFunction, Arn]
+            Next: FinalState
+            Retry:
+              - ErrorEquals:
+                  - States.ALL
+                MaxAttempts: 3
+                IntervalSeconds: 30
+                BackoffRate: 2
+          FinalState:
+            Type: Pass
+            End: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - Fn::GetAtt: [UsersTable, Arn]
+  environment:
+    USERS_TABLE: ${param:tableName}
+
+functions:
+#POST /v1/payment
+  paymentFunction:
+    handler: src/handler/index.payment
+    events:
+      - http:
+          path: ${self:custom.version}/payment
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+    environment:
+      nombreStepFuncion: ${self:custom.environment}-step-transacction
+  #GET /v1/transaction
+  getTransactionFunction:
+    handler: src/handler/index.getTransaction
+    events:
+      - http:
+          path: ${self:custom.version}/transaction/{id}
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+  #Funciones del step function
+  validUserFunction:
+    handler: src/handler/lambda.validUser
+    timeout: 900
+    environment:
+      tableUserName: ${self:resources.Resources.UsersTable.Properties.TableName}
+  transactionFunction:
+    handler: src/handler/lambda.transacction
+    timeout: 900
+  saveTransacctionFunction:
+    handler: src/handler/lambda.saveTransacction
+    timeout: 900
+    environment:
+      tableUserName: ${self:resources.Resources.TransactionTable.Properties.TableName}
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${param:tableName}
+    TransactionTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${param:tableTransactionName}

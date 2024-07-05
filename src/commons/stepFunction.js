@@ -1,0 +1,43 @@
+const AWS = require('aws-sdk');
+const stepfunctions = new AWS.StepFunctions();
+
+const callStepFunctionName = async(obj, name) => {
+    const stateMachineName = name;
+    const listSM = await stepfunctions.listStateMachines({}).promise();
+    
+    for await(let stateMachine of listSM.stateMachines){
+        if (stateMachine.name.indexOf(stateMachineName) >= 0) {
+            const params = {
+                stateMachineArn: stateMachine.stateMachineArn,
+                input: JSON.safeStringify(obj)
+            };
+            return stepfunctions.startExecution(params).promise();
+        }
+    }
+
+    return -1;
+};
+
+
+// safely handles circular references
+JSON.safeStringify = (obj, indent = 2) => {
+    let cache = [];
+    const retVal = JSON.stringify(
+        obj,
+        (key, value) =>
+        typeof value === "object" && value !== null ?
+        cache.includes(value) ?
+        undefined // Duplicate reference found, discard key
+        :
+        cache.push(value) && value // Store value in our collection
+        :
+        value,
+        indent
+    );
+    cache = null;
+    return retVal;
+};
+
+module.exports = {
+    callStepFunctionName
+}
