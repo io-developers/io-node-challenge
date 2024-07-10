@@ -1,0 +1,1 @@
+export { startProcess } from './controller/startProcessController';
