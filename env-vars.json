@@ -1,0 +1,13 @@
+{
+  "GetTransactionsFunction": {
+    "TRANSACTION_TABLE": "ServerlessAppStack-TransactionsTable0A011FCB-1PLNRR384FE6Q"
+  },
+  "ExecutePaymentFunction": {
+    "ACTIVITY_TABLE": "ServerlessAppStack-ActivityTable0B58B12C-1TWRDUE7KVAAA",
+    "TRANSACTION_TABLE": "ServerlessAppStack-TransactionsTable0A011FCB-1PLNRR384FE6Q",
+    "PAYMENT_PROCESSOR_URL": "https://9ateosf7cj.execute-api.us-east-1.amazonaws.com/dev"
+  },
+  "GetUsersFunction": {
+    "USER_TABLE": "ServerlessAppStack-UsersTable9725E9C8-12S9BCI09OW4R"
+  }
+}

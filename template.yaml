@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Parameters:
+  ActivityTable:
+    Type: String
+    Description: Name of the DynamoDB Activity table
+  UserTable:
+    Type: String
+    Description: Name of the DynamoDB User table
+  TransactionTable:
+    Type: String
+    Description: Name of the DynamoDB Transaction table
+  PaymentProcessorUrl:
+    Type: String
+    Description: URL of the Payment Processor API
+
+Resources:
+  PaymentProcessorFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda.paymentProcessorHandler
+      Runtime: nodejs20.x
+      CodeUri: ./dist
+      MemorySize: 128
+      Timeout: 10
+      Events:
+        PaymentProcessorApi:
+          Type: Api
+          Properties:
+            Path: /v1/payment-processor
+            Method: post
+
+  GetTransactionsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda.getTransactionsHandler
+      Runtime: nodejs20.x
+      CodeUri: ./dist
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          TRANSACTION_TABLE: !Ref TransactionTable
+      Events:
+        GetTransactionsApi:
+          Type: Api
+          Properties:
+            Path: /v1/transactions
+            Method: get
+            RequestParameters:
+              - method.request.querystring.transactionId: true
+
+  ExecutePaymentFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda.executePaymentHandler
+      Runtime: nodejs20.x
+      CodeUri: ./dist
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          TRANSACTION_TABLE: !Ref TransactionTable
+          PAYMENT_PROCESSOR_URL: !Ref PaymentProcessorUrl
+      Events:
+        PostPaymentsApi:
+          Type: Api
+          Properties:
+            Path: /v1/payments
+            Method: post
+            RequestModels:
+              application/json: CreatePaymentsRequestModel
+
+  GetUsersFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda.getUserHandler
+      Runtime: nodejs20.x
+      CodeUri: ./dist
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserTable
+      Events:
+        GetUsersApi:
+          Type: Api
+          Properties:
+            Path: /v1/users
+            Method: get
+            RequestParameters:
+              - method.request.querystring.userId: true
+
+  ### Define Models for Request Validation ###
+  CreatePaymentsRequestModel:
+    Type: 'AWS::ApiGateway::Model'
+    Properties:
+      RestApiId:
+        Ref: 'AWS::Serverless::Api'
+      ContentType: 'application/json'
+      Schema:
+        type: 'object'
+        properties:
+          userId:
+            type: 'string'
+          amount:
+            type: 'number'
+        required:
+          - userId
+          - amount
