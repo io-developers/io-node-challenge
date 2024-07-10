@@ -1,0 +1,196 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: jcarlos
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: io-node-challenge
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: io-node-challenge
+
+plugins:
+  - serverless-step-functions
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage,'prod'}
+  timeout: 120
+  memorySize: 512
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:Query"
+      Resource:
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${self:provider.stage}-users"
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${self:provider.stage}-transactions"
+        - "arn:aws:dynamodb:us-east-1:*:table/${self:service}-${self:provider.stage}-activity"
+    - Effect: "Allow"
+      Action:
+        - "states:startExecution"
+      Resource: "arn:aws:states:us-east-1:*:stateMachine:${self:service}-${self:provider.stage}-state-machine-payment"
+
+custom:
+  # apiMockUrL: https://9tqup1awx3.execute-api.us-east-1.amazonaws.com/test/v1/mockPayment
+  apiMockUrL: https://run.mocky.io/v3/20a586d4-e8a3-4785-b4cc-fbdaf66ea9d6
+
+
+
+functions:
+  lmbExecutePayments:
+    handler: src/payments/infrastructure/controller/paymentsController.paymentTransaction
+    name: ${self:service}-${self:provider.stage}-execute-payments
+    environment:
+      API_MOCK_URL: ${self:custom.apiMockUrL}
+      TRANSACTION_TABLE: ${self:service}-${self:provider.stage}-transaction
+
+  ApiMockPayments:
+    handler: src/mockPayments/infrastructure/controller/mockPaymentController.processPayment
+    name: ${self:service}-${self:provider.stage}-process-mock-payments
+    events:
+      - http:
+          path: v1/mockPayment
+          method: post
+
+  streamRegisterActivity:
+    handler: src/activity/infrastructure/controller/activityController.activityProcess
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionsTable
+              - StreamArn
+    environment:
+      ACTIVITY_TABLE: ${self:service}-${self:provider.stage}-activity
+
+  lmbValidateUser:
+    handler: src/user/infrastructure/controller/validateUserController.validateUser
+    name: ${self:service}-${self:provider.stage}-validate-user
+    environment:
+      USER_TABLE: ${self:service}-${self:provider.stage}-user
+
+  lmbStartProcess:
+    handler: src/payments/infrastructure/controller/startProcessController.startProcess
+    name: ${self:service}-${self:provider.stage}-start-process
+    events:
+      - http:
+          path: process
+          method: post
+    environment:
+      STATE_FUNCTION: arn:aws:states:us-east-1:*:stateMachine:${self:service}-${self:provider.stage}-state-machine-payment
+
+stepFunctions:
+  stateMachines:
+    PaymentProcessStateMachine:
+      name: ${self:service}-${self:provider.stage}-state-machine-payment
+      definition:
+        Comment: "State Machine to process transaction"
+        States:
+          User Validate:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: "$.Payload"
+            Parameters:
+              Payload.$: "$"
+              FunctionName: arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-validate-user:$LATEST
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              - Lambda.TooManyRequestsException
+              IntervalSeconds: 1
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: UserValidateAnswer
+          UserValidateAnswer:
+            Type: Choice
+            Choices:
+            - Variable: "$.state"
+              BooleanEquals: false
+              Next: Fail
+            Default: Pass
+          Pass:
+            Type: Pass
+            Next: Execute Payment
+            InputPath: "$.data"
+          Execute Payment:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            OutputPath: "$.Payload"
+            Parameters:
+              Payload.$: "$"
+              FunctionName: arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-execute-payments:$LATEST
+            Retry:
+            - ErrorEquals:
+              - Lambda.ServiceException
+              - Lambda.AWSLambdaException
+              - Lambda.SdkClientException
+              - Lambda.TooManyRequestsException
+              IntervalSeconds: 1
+              MaxAttempts: 3
+              BackoffRate: 2
+            Next: Choice
+          Choice:
+            Type: Choice
+            Choices:
+            - Variable: "$.transactionId"
+              IsPresent: true
+              Comment: Process correct
+              Next: Success
+            Default: Fail
+          Success:
+            Type: Succeed
+          Fail:
+            Type: Fail
+        StartAt: User Validate
+
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-user
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-transaction
+        AttributeDefinitions:
+          - AttributeName: transactionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: transactionId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+    ActivityTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-activity
+        AttributeDefinitions:
+          - AttributeName: activityId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: activityId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5

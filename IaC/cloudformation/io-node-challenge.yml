@@ -1,0 +1,566 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: The AWS CloudFormation template for this Serverless application
+Resources:
+  ServerlessDeploymentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  ServerlessDeploymentBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ServerlessDeploymentBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:*
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Join
+                - ''
+                - - 'arn:'
+                  - !Ref AWS::Partition
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+                  - /*
+              - !Join
+                - ''
+                - - 'arn:'
+                  - !Ref AWS::Partition
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+  LmbExecutePaymentsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/io-node-challenge-test-execute-payments
+  ApiMockPaymentsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/io-node-challenge-test-process-mock-payments
+  StreamRegisterActivityLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/io-node-challenge-test-streamRegisterActivity
+  LmbValidateUserLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/io-node-challenge-test-validate-user
+  LmbStartProcessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/io-node-challenge-test-start-process
+  IamRoleLambdaExecution:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Join
+            - '-'
+            - - io-node-challenge
+              - test
+              - lambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:CreateLogGroup
+                  - logs:TagResource
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/io-node-challenge-test*:*
+              - Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/io-node-challenge-test*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                Resource:
+                  - arn:aws:dynamodb:us-east-1:*:table/io-node-challenge-test-users
+                  - arn:aws:dynamodb:us-east-1:*:table/io-node-challenge-test-transactions
+                  - arn:aws:dynamodb:us-east-1:*:table/io-node-challenge-test-activity
+              - Effect: Allow
+                Action:
+                  - states:startExecution
+                Resource: arn:aws:states:us-east-1:*:stateMachine:StateMachine-Payment-Transaction
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:DescribeStream
+                  - dynamodb:ListStreams
+                Resource:
+                  - !GetAtt TransactionsTable.StreamArn
+      Path: /
+      RoleName: !Join
+        - '-'
+        - - io-node-challenge
+          - test
+          - !Ref AWS::Region
+          - lambdaRole
+  LmbExecutePaymentsLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: serverless/io-node-challenge/test/1720500075337-2024-07-09T04:41:15.337Z/io-node-challenge.zip
+      Handler: src/payments/infrastructure/controller/paymentsController.paymentTransaction
+      Runtime: nodejs20.x
+      FunctionName: io-node-challenge-test-execute-payments
+      MemorySize: 512
+      Timeout: 120
+      Environment:
+        Variables:
+          API_MOCK_URL: https://9tqup1awx3.execute-api.us-east-1.amazonaws.com/test/v1/mockPayment
+          TRANSACTION_TABLE: io-node-challenge-test-transaction
+          NODE_OPTIONS: '--enable-source-maps'
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+    DependsOn:
+      - LmbExecutePaymentsLogGroup
+  ApiMockPaymentsLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: serverless/io-node-challenge/test/1720500075337-2024-07-09T04:41:15.337Z/io-node-challenge.zip
+      Handler: src/mockPayments/infrastructure/controller/mockPaymentController.processPayment
+      Runtime: nodejs20.x
+      FunctionName: io-node-challenge-test-process-mock-payments
+      MemorySize: 512
+      Timeout: 120
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+    DependsOn:
+      - ApiMockPaymentsLogGroup
+  StreamRegisterActivityLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: serverless/io-node-challenge/test/1720500075337-2024-07-09T04:41:15.337Z/io-node-challenge.zip
+      Handler: src/activity/infrastructure/controller/activityController.activityProcess
+      Runtime: nodejs20.x
+      FunctionName: io-node-challenge-test-streamRegisterActivity
+      MemorySize: 512
+      Timeout: 120
+      Environment:
+        Variables:
+          ACTIVITY_TABLE: io-node-challenge-test-activity
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+    DependsOn:
+      - StreamRegisterActivityLogGroup
+  LmbValidateUserLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: serverless/io-node-challenge/test/1720500075337-2024-07-09T04:41:15.337Z/io-node-challenge.zip
+      Handler: src/user/infrastructure/controller/validateUserController.validateUser
+      Runtime: nodejs20.x
+      FunctionName: io-node-challenge-test-validate-user
+      MemorySize: 512
+      Timeout: 120
+      Environment:
+        Variables:
+          USER_TABLE: io-node-challenge-test-user
+          NODE_OPTIONS: '--enable-source-maps'
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+    DependsOn:
+      - LmbValidateUserLogGroup
+  LmbStartProcessLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: serverless/io-node-challenge/test/1720500075337-2024-07-09T04:41:15.337Z/io-node-challenge.zip
+      Handler: src/payments/infrastructure/controller/startProcessController.startProcess
+      Runtime: nodejs20.x
+      FunctionName: io-node-challenge-test-start-process
+      MemorySize: 512
+      Timeout: 120
+      Environment:
+        Variables:
+          STATE_FUNCTION: arn:aws:states:us-east-1:*:stateMachine:StateMachine-Payment-Transaction
+          NODE_OPTIONS: '--enable-source-maps'
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+    DependsOn:
+      - LmbStartProcessLogGroup
+  LmbExecutePaymentsLambdaVersionwYViiPYRk8SDWQslgIWLffqaNsJz915uv5wq9JfTpU:
+    Type: AWS::Lambda::Version
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref LmbExecutePaymentsLambdaFunction
+      CodeSha256: WtaXq2ackaZTrvJbViRP3Srm0Juzih5DoinwnHDAFsI=
+  ApiMockPaymentsLambdaVersioneZi8TNV8t9sQoeb0XCzgfWdFrFXv79tBcTtooTb6k:
+    Type: AWS::Lambda::Version
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref ApiMockPaymentsLambdaFunction
+      CodeSha256: WtaXq2ackaZTrvJbViRP3Srm0Juzih5DoinwnHDAFsI=
+  StreamRegisterActivityLambdaVersionItJJkeRLvtHfMnYM4HVAzIhmZlfQ2OhGdwe8KeEd4:
+    Type: AWS::Lambda::Version
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref StreamRegisterActivityLambdaFunction
+      CodeSha256: WtaXq2ackaZTrvJbViRP3Srm0Juzih5DoinwnHDAFsI=
+  LmbValidateUserLambdaVersionVVIk6Xvjed50q7HWagOYxEzZ0cKif7WvssIj0JXNU:
+    Type: AWS::Lambda::Version
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref LmbValidateUserLambdaFunction
+      CodeSha256: WtaXq2ackaZTrvJbViRP3Srm0Juzih5DoinwnHDAFsI=
+  LmbStartProcessLambdaVersioncLhkW1AwefQDcQoOrRlmLW2pn2xT6jzSbKO3rUFqUpM:
+    Type: AWS::Lambda::Version
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref LmbStartProcessLambdaFunction
+      CodeSha256: WtaXq2ackaZTrvJbViRP3Srm0Juzih5DoinwnHDAFsI=
+  StateMachineDashPaymentDashProcessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub states.${AWS::Region}.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: test-io-node-challenge-statemachine
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-validate-user:$LATEST
+                  - arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-validate-user:$LATEST:*
+                  - arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-execute-payments:$LATEST
+                  - arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-execute-payments:$LATEST:*
+  StateMachineDashPaymentDashProcess:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      DefinitionString: |-
+        {
+          "Comment": "State Machine to process transaction",
+          "States": {
+            "User Validate": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-validate-user:$LATEST"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "UserValidateAnswer"
+            },
+            "UserValidateAnswer": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.state",
+                  "BooleanEquals": false,
+                  "Next": "Fail"
+                }
+              ],
+              "Default": "Pass"
+            },
+            "Pass": {
+              "Type": "Pass",
+              "Next": "Execute Payment",
+              "InputPath": "$.data"
+            },
+            "Execute Payment": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "arn:aws:lambda:us-east-1:*:function:io-node-challenge-test-execute-payments:$LATEST"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Choice"
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.transactionId",
+                  "IsPresent": true,
+                  "Comment": "Process correct",
+                  "Next": "Success"
+                }
+              ],
+              "Default": "Fail"
+            },
+            "Success": {
+              "Type": "Succeed"
+            },
+            "Fail": {
+              "Type": "Fail"
+            }
+          },
+          "StartAt": "User Validate"
+        }
+      RoleArn: !GetAtt StateMachineDashPaymentDashProcessRole.Arn
+      StateMachineName: StateMachine-Payment-Process
+    DependsOn:
+      - StateMachineDashPaymentDashProcessRole
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: test-io-node-challenge
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Policy: ''
+  ApiGatewayResourceV1:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: v1
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceV1Mockpayment:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref ApiGatewayResourceV1
+      PathPart: mockPayment
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceProcess:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: process
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodV1MockpaymentPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceV1Mockpayment
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':apigateway:'
+            - !Ref AWS::Region
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt ApiMockPaymentsLambdaFunction.Arn
+            - /invocations
+      MethodResponses: []
+    DependsOn:
+      - ApiMockPaymentsLambdaPermissionApiGateway
+  ApiGatewayMethodProcessPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceProcess
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref AWS::Partition
+            - ':apigateway:'
+            - !Ref AWS::Region
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt LmbStartProcessLambdaFunction.Arn
+            - /invocations
+      MethodResponses: []
+    DependsOn:
+      - LmbStartProcessLambdaPermissionApiGateway
+  ApiGatewayDeployment1720500072657:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: test
+    DependsOn:
+      - ApiGatewayMethodV1MockpaymentPost
+      - ApiGatewayMethodProcessPost
+  ApiMockPaymentsLambdaPermissionApiGateway:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ApiMockPaymentsLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref AWS::Partition
+          - ':execute-api:'
+          - !Ref AWS::Region
+          - ':'
+          - !Ref AWS::AccountId
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  LmbStartProcessLambdaPermissionApiGateway:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LmbStartProcessLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref AWS::Partition
+          - ':execute-api:'
+          - !Ref AWS::Region
+          - ':'
+          - !Ref AWS::AccountId
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  StreamRegisterActivityEventSourceMappingDynamodbTransactionsTable:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - IamRoleLambdaExecution
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt TransactionsTable.StreamArn
+      FunctionName: !GetAtt StreamRegisterActivityLambdaFunction.Arn
+      StartingPosition: TRIM_HORIZON
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: io-node-challenge-test-user
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  TransactionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: io-node-challenge-test-transaction
+      AttributeDefinitions:
+        - AttributeName: transactionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: transactionId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+  ActivityTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: io-node-challenge-test-activity
+      AttributeDefinitions:
+        - AttributeName: activityId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: activityId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+Outputs:
+  ServerlessDeploymentBucketName:
+    Value: !Ref ServerlessDeploymentBucket
+    Export:
+      Name: sls-io-node-challenge-test-ServerlessDeploymentBucketName
+  LmbExecutePaymentsLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref LmbExecutePaymentsLambdaVersionwYViiPYRk8SDWQslgIWLffqaNsJz915uv5wq9JfTpU
+    Export:
+      Name: sls-io-node-challenge-test-LmbExecutePaymentsLambdaFunctionQualifiedArn
+  ApiMockPaymentsLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref ApiMockPaymentsLambdaVersioneZi8TNV8t9sQoeb0XCzgfWdFrFXv79tBcTtooTb6k
+    Export:
+      Name: sls-io-node-challenge-test-ApiMockPaymentsLambdaFunctionQualifiedArn
+  StreamRegisterActivityLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref StreamRegisterActivityLambdaVersionItJJkeRLvtHfMnYM4HVAzIhmZlfQ2OhGdwe8KeEd4
+    Export:
+      Name: sls-io-node-challenge-test-StreamRegisterActivityLambdaFunctionQualifiedArn
+  LmbValidateUserLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref LmbValidateUserLambdaVersionVVIk6Xvjed50q7HWagOYxEzZ0cKif7WvssIj0JXNU
+    Export:
+      Name: sls-io-node-challenge-test-LmbValidateUserLambdaFunctionQualifiedArn
+  LmbStartProcessLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref LmbStartProcessLambdaVersioncLhkW1AwefQDcQoOrRlmLW2pn2xT6jzSbKO3rUFqUpM
+    Export:
+      Name: sls-io-node-challenge-test-LmbStartProcessLambdaFunctionQualifiedArn
+  StateMachineDashPaymentDashProcessArn:
+    Description: Current StateMachine Arn
+    Value: !Ref StateMachineDashPaymentDashProcess
+    Export:
+      Name: sls-io-node-challenge-test-StateMachineDashPaymentDashProcessArn
+  ServiceEndpoint:
+    Description: URL of the service endpoint
+    Value: !Join
+      - ''
+      - - https://
+        - !Ref ApiGatewayRestApi
+        - .execute-api.
+        - !Ref AWS::Region
+        - .
+        - !Ref AWS::URLSuffix
+        - /test
+    Export:
+      Name: sls-io-node-challenge-test-ServiceEndpoint
