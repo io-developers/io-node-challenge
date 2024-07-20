@@ -1,4 +1,9 @@
 {
   "singleQuote": true,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "editor.formatOnSave": true,
+  "tabWidth": 2,
+  "useTabs": false,
+  "indent_style": "space",
+  "indent_size": 2
 }

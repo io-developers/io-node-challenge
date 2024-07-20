@@ -1,0 +1,9 @@
+transactions:
+  handler: src/Transactions/Infrastructure/AppLambda.handler
+  events:
+    - http:
+        method: GET
+        path: 'V1/transactions/{id}'
+    - http:
+        method: POST
+        path: 'V1/transactions'

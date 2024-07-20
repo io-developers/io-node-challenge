@@ -12,13 +12,4 @@ package:
   individually: true
   exclude:
     - npm-cache/**
-functions:
-  appmain:
-    handler: src/app.handler
-    events:
-      - http:
-          method: ANY
-          path: /
-      - http:
-          method: ANY
-          path: '{proxy+}'
+functions: ${file(config/functions.yaml)}

@@ -4,7 +4,7 @@ import serverlessExpress from '@codegenie/serverless-express';
 import { Context, Handler } from 'aws-lambda';
 import express from 'express';
 
-import { AppModule } from './app.module';
+import { AppModule } from './AppModule';
 
 let cachedServer: Handler;
 
@@ -13,7 +13,7 @@ async function bootstrap() {
   if (!cachedServer) {
     const expressApp = express();
     const nestApp = await NestFactory.create(
-      AppModule,
+        AppModule,
       new ExpressAdapter(expressApp),
     );
     nestApp.enableCors();
