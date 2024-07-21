@@ -5,9 +5,13 @@ provider:
   stage: ${opt:stage,'DESA'}
   region: us-east-2
   timeout: 60
+custom:
+  reducer:
+    ignoreMissing: true
 plugins:
   - serverless-plugin-typescript
   - serverless-offline
+  - serverless-plugin-reducer
 package:
   individually: true
   exclude:
