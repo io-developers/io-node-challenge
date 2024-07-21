@@ -5,15 +5,20 @@ provider:
   stage: ${opt:stage,'DESA'}
   region: us-east-2
   timeout: 60
+environment: ${file(config/environments.yaml)}
 custom:
   reducer:
     ignoreMissing: true
+  seed:
+    seedUsersTable: ${file(config/dynamodb-seed.yaml):seedUsersTable}
 plugins:
   - serverless-plugin-typescript
   - serverless-offline
   - serverless-plugin-reducer
+  - serverless-dynamodb-seed
 package:
   individually: true
   exclude:
     - npm-cache/**
 functions: ${file(config/functions.yaml)}
+resources: ${file(config/resources.yaml)}

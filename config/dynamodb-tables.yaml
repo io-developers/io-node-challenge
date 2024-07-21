@@ -1,0 +1,35 @@
+usersTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: TABLE_${self:provider.stage}_USERS
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: userId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: userId
+        KeyType: HASH
+
+transactionsTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: TABLE_${self:provider.stage}_TRANSACTIONS
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: transactionId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: transactionId
+        KeyType: HASH
+
+ActivityTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: TABLE_${self:provider.stage}_ACTIVITY
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: activityId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: activityId
+        KeyType: HASH
