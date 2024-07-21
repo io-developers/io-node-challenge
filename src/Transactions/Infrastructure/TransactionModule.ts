@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TransactionsController } from './TransactionsController';
+import { TransactionController } from './TransactionController';
 import { TransactionService } from '../Domain/Services/TransactionService';
 import { TransactionUseCase } from '../Application/UseCases/TransactionUseCase';
 import { TransactionRepositoryImpl } from './Adapters/TransactionRepositoryImpl';
 
 @Module({
     controllers: [
-        TransactionsController
+        TransactionController
     ],
     providers: [
         TransactionService,

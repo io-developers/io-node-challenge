@@ -2,8 +2,8 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { TransactionUseCase } from '../Application/UseCases/TransactionUseCase';
 import { TransactionRequestDTO } from '../Application/DTOs/TransactionRequestDTO';
 
-@Controller('v1/transactions')
-export class TransactionsController {
+@Controller('V1/transactions')
+export class TransactionController {
 
     private readonly transactionUseCase: TransactionUseCase;
 

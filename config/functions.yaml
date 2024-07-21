@@ -1,3 +1,9 @@
+payments:
+  handler: src/Payments/Infrastructure/AppLambda.handler
+  events:
+    - http:
+        method: POST
+        path: 'V1/payments/create'
 transactions:
   handler: src/Transactions/Infrastructure/AppLambda.handler
   events:
