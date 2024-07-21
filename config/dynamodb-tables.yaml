@@ -1,7 +1,7 @@
 usersTable:
   Type: AWS::DynamoDB::Table
   Properties:
-    TableName: TABLE_${self:provider.stage}_USERS
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
     BillingMode: PAY_PER_REQUEST
     AttributeDefinitions:
       - AttributeName: userId
@@ -13,7 +13,7 @@ usersTable:
 transactionsTable:
   Type: AWS::DynamoDB::Table
   Properties:
-    TableName: TABLE_${self:provider.stage}_TRANSACTIONS
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS}
     BillingMode: PAY_PER_REQUEST
     AttributeDefinitions:
       - AttributeName: transactionId
@@ -25,7 +25,7 @@ transactionsTable:
 ActivityTable:
   Type: AWS::DynamoDB::Table
   Properties:
-    TableName: TABLE_${self:provider.stage}_ACTIVITY
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_ACTIVITY}
     BillingMode: PAY_PER_REQUEST
     AttributeDefinitions:
       - AttributeName: activityId

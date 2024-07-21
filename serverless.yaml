@@ -4,8 +4,8 @@ provider:
   runtime: nodejs20.x
   stage: ${opt:stage,'DESA'}
   region: us-east-2
-  timeout: 60
-environment: ${file(config/environments.yaml)}
+  timeout: 15
+  environment: ${file(config/environments.yaml)}
 custom:
   reducer:
     ignoreMissing: true
@@ -16,9 +16,11 @@ plugins:
   - serverless-offline
   - serverless-plugin-reducer
   - serverless-dynamodb-seed
+  - serverless-step-functions
 package:
   individually: true
   exclude:
     - npm-cache/**
 functions: ${file(config/functions.yaml)}
 resources: ${file(config/resources.yaml)}
+stepFunctions: ${file(config/stepfunctions.yaml)}

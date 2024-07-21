@@ -1,0 +1,4 @@
+stateMachines:
+  PaymentWorkFlow: ${file(config/stepfunctions/sf-paymentworkflow.yaml)}
+      
+validate: true

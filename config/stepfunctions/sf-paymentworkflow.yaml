@@ -1,0 +1,15 @@
+name: SF_PAYMENT_WORKFLOW
+events:
+  - http:
+      method: POST
+      path: 'V1/payments'
+      request:
+        template:
+          application/json: ${file(config/request/request-stepfunction-payments.vm)}
+definition:
+  Comment: Flujo de transacciones de pago
+  StartAt: PasoPrueba
+  States:
+    PasoPrueba:
+      Type: Pass
+      End: true

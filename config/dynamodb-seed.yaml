@@ -1,5 +1,5 @@
 seedUsersTable:
-  table: TABLE_${self:provider.stage}_USERS
+  table: ${self:provider.environment.DYNAMODB_TABLE_USERS}
   sources:
     - config/seeders/${self:provider.stage}/users/seed-user-1.json
     - config/seeders/${self:provider.stage}/users/seed-user-2.json

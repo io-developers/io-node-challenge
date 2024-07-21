@@ -45,6 +45,7 @@
     "serverless-offline": "^13.6.0",
     "serverless-plugin-reducer": "^4.0.1",
     "serverless-plugin-typescript": "^2.1.5",
+    "serverless-step-functions": "^3.21.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
