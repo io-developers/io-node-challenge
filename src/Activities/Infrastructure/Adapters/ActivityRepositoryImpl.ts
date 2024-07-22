@@ -7,7 +7,7 @@ export class ActivityRepositoryImpl implements ActivityRepository {
   async createActivity(activity: Activity): Promise<Activity> {
     console.log('-- ActivityRepositoryImpl.createActivity --');
     console.log({ activity });
-    const tabla = process.env.ACTIVITIES_TABLE;
+    const tabla = process.env.DYNAMODB_TABLE_ACTIVITY;
     const params = {
       TableName: tabla,
       Item: activity

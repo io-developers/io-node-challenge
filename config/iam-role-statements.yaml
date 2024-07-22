@@ -1,0 +1,9 @@
+- Effect: Allow
+  Action:
+    - dynamodb:GetItem
+    - dynamodb:PutItem
+    - dynamodb:GetRecords
+    - dynamodb:GetShardIterator
+    - dynamodb:DescribeStream
+    - dynamodb:ListStreams
+  Resource: '*'

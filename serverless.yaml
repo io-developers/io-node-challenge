@@ -5,12 +5,15 @@ provider:
   stage: ${opt:stage,'DESA'}
   region: us-east-2
   timeout: 15
+  logRetentionInDays: ${self:custom.logRetentionInDays.${self:provider.stage}}
   environment: ${file(config/environments.yaml)}
+  iamRoleStatements: ${file(config/iam-role-statements.yaml)}
 custom:
   reducer:
     ignoreMissing: true
   seed:
     seedUsersTable: ${file(config/dynamodb-seed.yaml):seedUsersTable}
+  logRetentionInDays: ${file(./config/common-custom-config.yaml):logRetentionInDays}
 plugins:
   - serverless-plugin-typescript
   - serverless-offline

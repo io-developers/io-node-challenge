@@ -18,7 +18,8 @@ export class ActivityService {
     console.log('-- ActivityService.createActivity --');
     activity.activityId = uuidv4();
     activity.date = new Date().toISOString()
-    return this.activityRepository.createActivity(activity);
+    await this.activityRepository.createActivity(activity);
+    return activity;
   }
 
 }
