@@ -1,4 +1,4 @@
-import { Activity } from "../../../Activities/Domain/Entities/Activity";
+import { Activity } from "../Entities/Activity";
 
 export interface ActivityRepository {
 

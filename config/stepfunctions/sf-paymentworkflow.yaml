@@ -7,9 +7,70 @@ events:
         template:
           application/json: ${file(config/request/request-stepfunction-payments.vm)}
 definition:
-  Comment: Flujo de transacciones de pago
-  StartAt: PasoPrueba
+  Comment: WorkFlow Payments
+  StartAt: ValidateUser
   States:
-    PasoPrueba:
-      Type: Pass
-      End: true
+    ValidateUser:
+      Type: Task
+      Resource: arn:aws:states:::dynamodb:getItem
+      inputPath: "$"
+      Parameters:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
+        Key:
+          userId:
+            S.$: "$.input.userId"
+      ResultPath: "$.ValidateUserOutput"
+      Next: UserValidationSuccessful
+    UserValidationSuccessful:
+      Type: Choice
+      Choices:
+      - And:
+        - Variable: "$.ValidateUserOutput.Item"
+          IsPresent: true
+        - Variable: "$.ValidateUserOutput.Item.userId.S"
+          IsNull: false
+        Next: ExecutePayment
+      Default: Fail
+    ExecutePayment:
+      Type: Task
+      Resource: !GetAtt payments.Arn
+      inputPath: "$"
+      Parameters:
+        body:
+          action: create
+          userId.$: "$.input.userId"
+          amount.$: "$.input.amount"
+      Retry:
+      - ErrorEquals:
+        - States.ALL
+        IntervalSeconds: 2
+        MaxAttempts: 2
+        BackoffRate: 1
+      ResultPath: "$.ExecutePaymentOutput"
+      Next: PaymentSuccessful
+    PaymentSuccessful:
+      Type: Choice
+      Choices:
+      - And:
+        - Variable: "$.ExecutePaymentOutput.status"
+          IsPresent: true
+        - Variable: "$.ExecutePaymentOutput.status"
+          StringEquals: OK
+        Next: SaveTransactionPayment
+      Default: Fail
+    SaveTransactionPayment:
+      Type: Task
+      Resource: arn:aws:states:::dynamodb:putItem
+      inputPath: "$"
+      Parameters:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS}
+        Item:
+          userId:
+            S.$: "$.input.userId"
+          amount:
+            N: $.input.amount
+      Next: Success
+    Success:
+      Type: Succeed
+    Fail:
+      Type: Fail

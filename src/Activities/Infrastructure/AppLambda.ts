@@ -2,8 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { INestApplicationContext } from '@nestjs/common';
 import { Context } from 'aws-lambda';
 import { AppModule } from './AppModule';
-import { PaymentModule } from './PaymentModule';
-import { PaymentController } from './PaymentController';
+import { ActivityModule } from './ActivityModule';
+import { ActivityController } from './ActivityController';
 import { UtilsLambda } from '../../Commons/UtilsLambda';
 
 let appContext: INestApplicationContext;
@@ -13,17 +13,24 @@ async function bootstrap() {
   if (!appContext) {
     appContext = await NestFactory.createApplicationContext(AppModule);
   }
-  return appContext.select(PaymentModule).get(PaymentController);
+  return appContext.select(ActivityModule).get(ActivityController);
 }
 
 export const handler = async (event: any, context: Context, callback: any) => {
-  console.log('-- handler --');
   try {
+    console.log('-- handler --');
     const appContext = await bootstrap();
-    console.log({ event });
-    console.log('--------------------------');
-    const requestController = UtilsLambda.getRequestController(event);
-    const response = await appContext.execute(requestController.action, requestController.request);
+    const { eventName, dynamodb } = UtilsLambda.getRequestStremDynamoDB(event);
+    const request: any = {};
+    let action = null;
+    if (eventName === 'INSERT') {
+      action = 'create'
+      const transactionId = dynamodb.Keys.transactionId.S;
+      request.transactionId = transactionId;
+    } else {
+      throw new Error('Invalid event name: ' + eventName);
+    }
+    const response = await appContext.execute(action, request);
     console.log({ response });
     const responseLambda = UtilsLambda.getResponseLambda(response);
     callback(null, responseLambda);

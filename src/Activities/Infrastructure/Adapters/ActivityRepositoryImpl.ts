@@ -2,8 +2,11 @@ import { Activity } from '../../Domain/Entities/Activity';
 import { ActivityRepository } from '../../Domain/Ports/ActivityRepository';
 
 export class ActivityRepositoryImpl implements ActivityRepository {
-  createActivity(activity: Activity): Promise<Activity> {
+
+  async createActivity(activity: Activity): Promise<Activity> {
+    console.log('-- ActivityRepositoryImpl.createActivity --');
+    console.log({ activity });
     // TODO: implementar
-    return Promise.resolve(activity);
+    return activity;
   }
 }

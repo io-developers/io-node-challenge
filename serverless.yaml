@@ -17,6 +17,7 @@ plugins:
   - serverless-plugin-reducer
   - serverless-dynamodb-seed
   - serverless-step-functions
+  - serverless-dynamodb-stream-arn-plugin
 package:
   individually: true
   exclude:

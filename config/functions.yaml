@@ -1,15 +1,19 @@
 payments:
   handler: src/Payments/Infrastructure/AppLambda.handler
-  events:
-    - http:
-        method: POST
-        path: 'V1/payments/create'
+  name: LMB_${self:provider.stage}_PAYMENTS
 transactions:
   handler: src/Transactions/Infrastructure/AppLambda.handler
+  name: LMB_${self:provider.stage}_TRANSACTIONS
   events:
     - http:
         method: GET
         path: 'V1/transactions/{id}'
-    - http:
-        method: POST
-        path: 'V1/transactions'
+activities:
+  handler: src/Activities/Infrastructure/AppLambda.handler
+  name: LMB_${self:provider.stage}_ACTIVITIES
+  events:
+    - stream:
+        type: dynamodb
+        batchSize: 1
+        startingPosition: LATEST
+        arn: ${fetchStreamARN(${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS})}

@@ -1,9 +1,9 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Controller } from "@nestjs/common";
 import { PaymentUseCase } from "../Application/UseCases/PaymentUseCase";
 import { PaymentResponseDTO } from "../Application/DTOs/PaymentResponseDTO";
 import { PaymentRequestDTO } from "../Application/DTOs/PaymentRequestDTO";
 
-@Controller('V1/payments')
+@Controller()
 export class PaymentController {
   private readonly paymentUseCase: PaymentUseCase;
 
@@ -11,8 +11,17 @@ export class PaymentController {
     this.paymentUseCase = paymentUseCase;
   }
 
-  @Post('create')
-  async create(@Body() payment: PaymentRequestDTO): Promise<PaymentResponseDTO> {
+  async execute(action: string, request: object): Promise<object> {
+    console.log('-- PaymentController.execute --');
+    console.log({
+      action,
+      request
+    });
+    return this[action](request);
+  }
+
+  async create(payment: PaymentRequestDTO): Promise<PaymentResponseDTO> {
+    console.log('-- PaymentController.create --');
     return this.paymentUseCase.createPayment(payment);
   }
 

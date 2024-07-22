@@ -21,6 +21,8 @@ transactionsTable:
     KeySchema:
       - AttributeName: transactionId
         KeyType: HASH
+    StreamSpecification:
+      StreamViewType: NEW_IMAGE
 
 ActivityTable:
   Type: AWS::DynamoDB::Table
