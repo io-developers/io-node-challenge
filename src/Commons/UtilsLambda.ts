@@ -22,7 +22,7 @@ export class UtilsLambda {
   static getResponseLambda(response: any) {
     return {
       statusCode: 200,
-      body: JSON.stringify(response),
+      response,
     };
   }
 
@@ -30,7 +30,7 @@ export class UtilsLambda {
     const message = error.message || 'Ocurrió un error inesperado';
     return {
       statusCode: 500,
-      body: JSON.stringify({ message }),
+      response: { message },
     };
   }
 

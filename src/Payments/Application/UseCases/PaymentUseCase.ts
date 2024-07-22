@@ -14,6 +14,6 @@ export class PaymentUseCase {
 
   async createPayment(paymentRequest: PaymentRequestDTO): Promise<PaymentResponseDTO> {
     console.log(paymentRequest);
-    return this.paymentService.createPayment();
+    return this.paymentService.createPayment(paymentRequest.userId);
   }
 }

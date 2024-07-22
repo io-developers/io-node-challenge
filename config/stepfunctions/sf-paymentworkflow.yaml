@@ -13,7 +13,7 @@ definition:
     ValidateUser:
       Type: Task
       Resource: arn:aws:states:::dynamodb:getItem
-      inputPath: "$"
+      InputPath: "$"
       Parameters:
         TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
         Key:
@@ -34,7 +34,7 @@ definition:
     ExecutePayment:
       Type: Task
       Resource: !GetAtt payments.Arn
-      inputPath: "$"
+      InputPath: "$"
       Parameters:
         body:
           action: create
@@ -52,23 +52,25 @@ definition:
       Type: Choice
       Choices:
       - And:
-        - Variable: "$.ExecutePaymentOutput.status"
+        - Variable: "$.ExecutePaymentOutput.response.status"
           IsPresent: true
-        - Variable: "$.ExecutePaymentOutput.status"
+        - Variable: "$.ExecutePaymentOutput.response.status"
           StringEquals: OK
         Next: SaveTransactionPayment
       Default: Fail
     SaveTransactionPayment:
       Type: Task
       Resource: arn:aws:states:::dynamodb:putItem
-      inputPath: "$"
+      InputPath: "$"
       Parameters:
         TableName: ${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS}
         Item:
+          transactionId:
+            S.$: States.UUID()
           userId:
             S.$: "$.input.userId"
           amount:
-            N: $.input.amount
+            N.$: States.Format('{}', $.input.amount)
       Next: Success
     Success:
       Type: Succeed
