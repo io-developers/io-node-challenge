@@ -12,6 +12,10 @@ export class ActivityRepositoryImpl implements ActivityRepository {
       TableName: tabla,
       Item: activity
     };
-    return DynamoDBUtils.putItem(params);
+    const resultDB = await DynamoDBUtils.putItem(params);
+    if (resultDB) {
+      return activity;
+    }
+    return null;
   }
 }

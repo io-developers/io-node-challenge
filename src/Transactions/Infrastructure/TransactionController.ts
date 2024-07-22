@@ -18,6 +18,7 @@ export class TransactionController {
 
     @Get(':id')
     async getTransaction(@Param('id') id: string) {
+        console.log('-- TransactionController.getTransaction --');
         return this.transactionUseCase.getTransaction(id);
     }
 

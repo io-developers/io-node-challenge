@@ -26,6 +26,7 @@ export const handler = async (event: any, context: Context, callback: any) => {
     const response = await appContext.execute(requestController.action, requestController.request);
     console.log({ response });
     const responseLambda = UtilsLambda.getResponseLambda(response);
+    console.log({ responseLambda });
     callback(null, responseLambda);
   } catch (error) {
     console.log({ error });

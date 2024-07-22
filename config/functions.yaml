@@ -8,6 +8,8 @@ transactions:
     - http:
         method: GET
         path: 'V1/transactions/{id}'
+# Comentar la siguiente function 'activities' en el primer despliegue
+# luego descomentar y volver a desplegar
 activities:
   handler: src/Activities/Infrastructure/AppLambda.handler
   name: LMB_${self:provider.stage}_ACTIVITIES

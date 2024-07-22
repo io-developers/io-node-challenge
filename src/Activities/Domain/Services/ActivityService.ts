@@ -1,7 +1,7 @@
 import { Inject } from "@nestjs/common";
+import { v4 as uuidv4 } from 'uuid';
 import { Activity } from "../Entities/Activity";
 import { ActivityRepository } from "../Ports/ActivityRepository";
-import { v4 as uuidv4 } from 'uuid';
 
 export class ActivityService {
 
@@ -18,8 +18,7 @@ export class ActivityService {
     console.log('-- ActivityService.createActivity --');
     activity.activityId = uuidv4();
     activity.date = new Date().toISOString()
-    await this.activityRepository.createActivity(activity);
-    return activity;
+    return this.activityRepository.createActivity(activity);
   }
 
 }

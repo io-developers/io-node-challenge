@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Transaction } from "../../Domain/Entities/Transaction";
 import { TransactionRepository } from "../../Domain/Ports/TransactionRepository";
+import { DynamoDBUtils } from "../../../Commons/DynamoDBUtils";
 
 @Injectable()
 export class TransactionRepositoryImpl implements TransactionRepository {
@@ -9,14 +10,18 @@ export class TransactionRepositoryImpl implements TransactionRepository {
     // TODO: implementar
     return Promise.resolve(transaction);
   }
-  getTransaction(transactionId: string): Promise<Transaction> {
-    // TODO: implementar
-    const transaction: Transaction = {
-      transactionId: transactionId,
-      userId: '123',
-      amount: 100,
+
+  async getTransaction(transactionId: string): Promise<Transaction> {
+    console.log('-- TransactionRepositoryImpl.getTransaction --');
+    const tabla = process.env.DYNAMODB_TABLE_TRANSACTIONS;
+    const params = {
+      TableName: tabla,
+      Key: {
+        transactionId: transactionId
+      }
     };
-    return Promise.resolve(transaction);
+    const result = await DynamoDBUtils.getItem(params);
+    return result ? result as Transaction : null;
   }
 
 }

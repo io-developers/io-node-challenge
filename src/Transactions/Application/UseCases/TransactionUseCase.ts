@@ -22,8 +22,12 @@ export class TransactionUseCase {
     return transactionCreate as TransactionResponseDTO;
   }
 
-  async getTransaction(transactionId: string): Promise<TransactionResponseDTO> {
+  async getTransaction(transactionId: string): Promise<TransactionResponseDTO | { message: string}> {
+    console.log('-- TransactionUseCase.getTransaction --');
     const transaction = await this.transactionService.getTransaction(transactionId);
+    if (transaction === null) {
+      return { message: 'Transaction not found' };
+    }
     return transaction as TransactionResponseDTO;
   }
 }

@@ -1,5 +1,5 @@
 export interface Activity {
-    activityId: string;
+    activityId?: string;
     transactionId: string;
-    date: string;
+    date?: string;
 }

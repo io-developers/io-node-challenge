@@ -3,6 +3,7 @@ import { Activity } from "../../Domain/Entities/Activity";
 import { ActivityService } from "../../Domain/Services/ActivityService";
 import { ActivityRequestDTO } from "../DTOs/ActivityRequestDTO";
 import { ActivityResponseDTO } from "../DTOs/ActivityResponseDTO";
+import { RESPONSE_STATUS } from "../../../Commons/Constants";
 
 @Injectable()
 export class ActivityUseCase {
@@ -16,14 +17,14 @@ export class ActivityUseCase {
     console.log('-- ActivityUseCase.createActivity --');
     const activity = activityRequest as Activity
     const activityCreate = await this.ActivityService.createActivity(activity);
-    if (activityCreate.activityId) {
+    if (activityCreate?.activityId) {
       return {
-        status: 'OK',
+        status: RESPONSE_STATUS.OK,
         message: 'Activity created successfully',
       }
     }
     return {
-      status: 'ERROR',
+      status: RESPONSE_STATUS.ERROR,
       message: 'Error creating activity',
     }
   }
