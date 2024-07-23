@@ -18,3 +18,16 @@ coverage/
 .vscode
 
 dist/
+
+.idea
+
+# Ignorar archivos de estado de Terraform
+.terraform.tfstate
+.terraform.tfstate.backup
+
+# Ignorar archivos de variables sensibles
+*.tfvars
+*.auto.tfvars
+
+# Ignorar el archivo de bloqueo de Terraform
+.terraform.lock.hcl
