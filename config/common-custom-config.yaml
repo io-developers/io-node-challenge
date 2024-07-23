@@ -1,0 +1,3 @@
+logRetentionInDays:
+  DESA: 7
+  PROD: 30

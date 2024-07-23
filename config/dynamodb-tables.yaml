@@ -1,0 +1,37 @@
+usersTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_USERS}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: userId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: userId
+        KeyType: HASH
+
+transactionsTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: transactionId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: transactionId
+        KeyType: HASH
+    StreamSpecification:
+      StreamViewType: NEW_IMAGE
+
+ActivityTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: ${self:provider.environment.DYNAMODB_TABLE_ACTIVITY}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: activityId
+        AttributeType: S
+    KeySchema:
+      - AttributeName: activityId
+        KeyType: HASH

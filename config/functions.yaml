@@ -1,0 +1,23 @@
+payments:
+  handler: src/Payments/Infrastructure/AppLambda.handler
+  name: LMB_${self:provider.stage}_PAYMENTS
+transactions:
+  handler: src/Transactions/Infrastructure/AppLambda.handler
+  name: LMB_${self:provider.stage}_TRANSACTIONS
+  events:
+    - http:
+        method: GET
+        path: 'V1/transactions'
+# Comentar la siguiente function 'activities' en el primer despliegue
+# luego descomentar y volver a desplegar
+# por un problema del stream que no existe inicialmente (no se puede referenciar)
+# pendiente de revisar y mejorar
+activities:
+  handler: src/Activities/Infrastructure/AppLambda.handler
+  name: LMB_${self:provider.stage}_ACTIVITIES
+  events:
+    - stream:
+        type: dynamodb
+        batchSize: 1
+        startingPosition: LATEST
+        arn: ${fetchStreamARN(${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS})}

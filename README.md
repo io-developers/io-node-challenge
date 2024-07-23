@@ -1,5 +1,26 @@
 # Reto técnico iO - Backend
 
+## Pre-requisitos para la instalacion y despliegue
+- nodejs v20
+- Tener el Access Key ID y Secret Access Key de su cuenta de AWS
+
+## Instalacion
+- npm install
+- configure aws 
+
+## Ejecución en local
+- npm run start:dev
+
+## Ejecución Unit Test
+- npm run test
+
+## Despliegue en AWS
+- comentar/quitar la funcion activities del archivo config/functions.yaml para el primer despliegue, esto por un problema con el stream de dynamo. Al no existir, no se puede referenciar
+- npm run sls-deploy
+- descomentar o agregar las funcion activities que se indico en el primer paso, para volver a desplegar
+- npm run sls-deploy
+
+
 ## Descripción:
 Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:
 
