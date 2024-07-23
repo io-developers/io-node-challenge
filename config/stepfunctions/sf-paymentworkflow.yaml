@@ -1,11 +1,22 @@
 name: SF_PAYMENT_WORKFLOW
+type: EXPRESS
 events:
   - http:
       method: POST
       path: 'V1/payments'
+      action: StartSyncExecution
       request:
         template:
           application/json: ${file(config/request/request-stepfunction-payments.vm)}
+      response:
+        template:
+          application/json: ${file(config/response/response-stepfunction-payments.vm)}
+loggingConfig:
+  level: ALL
+  includeExecutionData: true
+  destinations:
+    - Fn::GetAtt: [StepFuncLogGroup, Arn]
+
 definition:
   Comment: WorkFlow Payments
   StartAt: ValidateUser
@@ -66,13 +77,16 @@ definition:
         TableName: ${self:provider.environment.DYNAMODB_TABLE_TRANSACTIONS}
         Item:
           transactionId:
-            S.$: States.UUID()
+            S.$: $.ExecutePaymentOutput.response.transactionId
           userId:
             S.$: "$.input.userId"
           amount:
             N.$: States.Format('{}', $.input.amount)
+      ResultPath: "$.SaveTransactionPaymentOutput"
       Next: Success
     Success:
       Type: Succeed
+      InputPath: "$"
+      OutputPath: "$.ExecutePaymentOutput.response.transactionId"
     Fail:
       Type: Fail

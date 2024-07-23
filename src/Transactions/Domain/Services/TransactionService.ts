@@ -23,6 +23,7 @@ export class TransactionService {
 
   async getTransaction(transactionId: string): Promise<Transaction> {
     console.log('-- TransactionService.getTransaction --');
+    console.log({ transactionId});
     return this.transactionRepository.getTransaction(transactionId);
   }
 

@@ -2,3 +2,7 @@ Resources:
   DynamoDBUsersTable: ${file(config/dynamodb-tables.yaml):usersTable}
   DynamoDBTransactionsTable: ${file(config/dynamodb-tables.yaml):transactionsTable}
   DynamoDBActivityTable: ${file(config/dynamodb-tables.yaml):ActivityTable}
+  StepFuncLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /aws/stepfunctions/${self:service}-${self:provider.stage}

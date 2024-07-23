@@ -1,0 +1,11 @@
+#set( $output = $util.parseJson($input.json('$.output')) )
+#if( "$output" == "" )
+{
+    "message": "Something was wrong"
+}
+#else
+{
+    "message": "Payment registered successfully",
+    "transactionId": $output
+}
+#end

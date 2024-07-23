@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { TransactionUseCase } from '../Application/UseCases/TransactionUseCase';
 import { TransactionRequestDTO } from '../Application/DTOs/TransactionRequestDTO';
 
@@ -16,10 +16,11 @@ export class TransactionController {
         return this.transactionUseCase.createTransaction(transaction);
     }
 
-    @Get(':id')
-    async getTransaction(@Param('id') id: string) {
+    @Get()
+    async getTransaction(@Query('transactionId') transactionId: string) {
         console.log('-- TransactionController.getTransaction --');
-        return this.transactionUseCase.getTransaction(id);
+        console.log('transactionId:', transactionId);
+        return this.transactionUseCase.getTransaction(transactionId);
     }
 
 }

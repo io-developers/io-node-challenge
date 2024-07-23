@@ -1,5 +1,5 @@
 #set($input = $input.json('$'))
 {
   "input": "$util.escapeJavaScript($input).replaceAll("\\'", "'")",
-  "stateMachineArn": "arn:aws:states:us-east-2:$context.accountId:stateMachine:SF_PAYMENT_WORKFLOW"
+  "stateMachineArn": "arn:aws:states:${self:provider.region}:$context.accountId:stateMachine:SF_PAYMENT_WORKFLOW"
 }

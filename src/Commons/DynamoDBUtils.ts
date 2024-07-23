@@ -13,6 +13,7 @@ export class DynamoDBUtils {
 
   static async callSingleOperation(action: string, params: any)  {
     console.log('-- DynamoDBUtils.callSingleOperation --');
+    console.log({ action, params });
     try {
       const dynamoDb = new DynamoDB.DocumentClient();
       return dynamoDb[action](params).promise();

@@ -49,13 +49,12 @@ defineFeature(feature, test => {
 
     when('I try get transaction', async () => {
       jest.spyOn(transactionRepository, 'getTransaction').mockResolvedValue(null);
+      result = await transactionUseCase.getTransaction(transactionIdRequest);
     });
 
     then('the transaction should fail with an error message', () => {
       console.log({ result });
-      expect(async () => {
-        await transactionUseCase.getTransaction(transactionIdRequest);
-      }).rejects.toThrow();
+      expect(result.message).toEqual('Transaction not found');
     });
   });
 

@@ -7,9 +7,11 @@ transactions:
   events:
     - http:
         method: GET
-        path: 'V1/transactions/{id}'
+        path: 'V1/transactions'
 # Comentar la siguiente function 'activities' en el primer despliegue
 # luego descomentar y volver a desplegar
+# por un problema del stream que no existe inicialmente (no se puede referenciar)
+# pendiente de revisar y mejorar
 activities:
   handler: src/Activities/Infrastructure/AppLambda.handler
   name: LMB_${self:provider.stage}_ACTIVITIES
