@@ -1,51 +1,99 @@
 # Reto técnico iO - Backend
 
 ## Descripción:
-Se requiere implementar un proyecto serverless de registro de pagos y consulta de transacciones. A continuación se muestran los diagramas correspondientes:
+Se requiere implementar un sistema el cual simule el abono de saldo a una cuenta y su posterios consulta. A continuación se muestran los diagramas correspondientes:
 
-### Diagrama 1:
-![Diagrama 1](images/post.png)
+
+### Funcionalidad de abono
+#### Contexto
+![POST-C4-L1](images/POST-C4-L1.drawio.png)
+#### Contenedores
+![POST-C4-L2](images/POST-C4-L2.drawio.png)
+#### Componentes
+![POST-C4-L3](images/POST-C4-L3.drawio.png)
+
+
 Este API debe de llamar a un Step Function el cual debe:
 - Validar el id de usuario comparándolo en la tabla **users**
-- En caso el usuario exista, un lambda llamado **execute-payments** debe llamar a un API Mock que el postulante debe crear, el cual debe de regresar una transacción exitosa
-- Si la transacción es exitosa, debe de grabarse un registro en la tabla **transactions**
-- Al terminar todo de forma exitosa, debe dar una respuesta satisfactoria que contenga el id de la transacción
+- En caso el usuario exista, un lambda llamado **execute-payment** debe llamar a un API Mock que el postulante debe crear, el cual debe de regresar una transacción exitosa a modo de evento.
+- Si la transacción es exitosa, como una siguiente tarea en el Step Function, debe de grabarse un registro en la tabla **transactions**
+- De forma asincrona, por medio de DynamoDB Streams, se debe ejecutar un lambda llamado **update-account**, el cual actualizara el saldo de la cuenta a la que se realizo el abono en la tabla **accounts**.
+- Al terminar todo de forma exitosa, debe dar una respuesta satisfactoria que contenga el id (source) de la transacción.
 
-Nota: En el momento que se interactúa con la tabla **transactions**, un stream de DynamoDB debe activar el lambda **register-activity**, el cual debe de guardar un registro del suceso en la tabla **activity**
+---
 
-### Diagrama 2:
-![Diagrama 2](images/get.png)
+### Funcionalidad de consulta de cuenta
+#### Contexto
+![GET-C4-L1](images/GET-C4-L1.drawio.png)
+#### Contenedores
+![GET-C4-L2](images/GET-C4-L2.drawio.png)
+#### Componentes
+![GET-C4-L3](images/GET-C4-L3.drawio.png)
+
 Este API debe de llamar a un Lambda Function la cual debe:
-- Consultar por el id de transacción desde el lambda **get-transaction** en la tabla **transactions**
-- En caso la transacción exista, debe de regresar el registro de la transacción
-- En caso la transacción no exista, debe de regresar una respuesta con el mensaje "Usuario no encontrado"
+- Consultar por id a la tabla **accounts**
+- En caso la cuenta exista, debe de regresar el registro.
+- En caso la cuenta no exista, debe de regresar una respuesta con el mensaje "Cuenta no encontrada"
 
 ## Consideraciones:
 
-Obligatorio : 
+### Datos de pruebas (IMPORTANTE):
+
+Ya que no se contara con un servicio para crear las cuentas, estas deberan de ser creadas manualmente en DynamoDB.
+
+
+### Obligatorio : 
 1. Respetar el arquetipo 
 2. Construir pruebas unitarias
 3. Buenas Prácticas (SOLID, Clean Code, etc)
 
-Deseable: 
+### Deseable: 
 1. Crear los componentes con IaC (Terraform, Cloudformation)
 2. Logs usando CloudWatch
 3. Formatters / Linters
 
 ## Anexos:
 
+### Accounts (DynamoDB Table)
+- PK: id (S)
+
+
+### Transaction (DynamoDB Table)
+- PK: source (S)
+- SK: id (N)
+
+### Account (Model)
+```
+{
+    "id": "{uuid}",
+    "amount": "{number}"
+}
+```
+
+### Transaction (Model)
+```
+{
+    "source": "{uuid}",
+    "id": "{id}",
+    "data": {
+        "accountId": "{id}",
+        "amount": "{number}"
+    }
+}
+```
+
 ### POST /v1/payments
 
 Payload
-```json
+```
 {
-    "userId": "f529177d-0521-414e-acd9-6ac840549e97",
+    "accountId": "f529177d-0521-414e-acd9-6ac840549e97",
     "amount": 30
 }
 ```
 
 Respusta OK (201)
-```json
+```
 {
     "message": "Payment registered successfully",
     "transactionId": "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
@@ -53,69 +101,34 @@ Respusta OK (201)
 ```
 
 Respuesta errada (400)
-```json
+```
 {
     "message": "Something was wrong"
 }
 ```
 
-### GET /v1/transactions
+### GET /v1/accounts/{accountId}
 
-Query params
+Path Params
 ```
-transactionId: "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
+accountId: "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
 ```
 
 Respusta OK (200)
-```json
+```
 {
-    "transactionId": "8db0a6fc-ad42-4974-ac1f-36bb90730afe",
-    "userId": "f529177d-0521-414e-acd9-6ac840549e97",
-    "paymentAmount": 30
+    "id": "8db0a6fc-ad42-4974-ac1f-36bb90730afe",
+    "amount": "30",
 }
 ```
 
 Respuesta errada (404)
-```json
+```
 {
-    "message": "Transaction not found"
+    "message": "Account not found"
 }
 ```
 
-### Tabla users:
-
-La tabla users debe de contener datos de los usuarios que pueden realizar una transacción.
-
-<dl>
-    <dt>Esquema:</dt>
-    <dd>userId (string - partition key)</dd>
-    <dd>name (string)</dd>
-    <dd>lastName (string)</dd>
-</dl>
-
-La tabla debe de tener el siguiente contenido:
-| userId      | name | lastName |
-| ----------- | ----------- | ----------- |
-| f529177d-0521-414e-acd9-6ac840549e97      | Pedro       | Suarez       |
-| 15f1c60a-2833-49b7-8660-065b58be2f89   | Andrea        | Vargas        |
-
-### Tabla transactions:
-
-<dl>
-    <dt>Esquema:</dt>
-    <dd>transactionId (partition key)</dd>
-    <dd>userId</dd>
-    <dd>amount</dd>
-</dl>
-
-### Tabla activity:
-
-<dl>
-    <dt>Esquema:</dt>
-    <dd>activityId (partition key)</dd>
-    <dd>transactionId</dd>
-    <dd>date</dd>
-</dl>
 
 ## Send us your challenge
 Cuando termines el reto, luego de forkear el repositorio, debes crear un pull request to our repository indicando en la descripción de este tu nombre y correo.
