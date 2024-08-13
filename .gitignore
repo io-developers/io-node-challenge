@@ -18,3 +18,5 @@ coverage/
 .vscode
 
 dist/
+
+packages/
