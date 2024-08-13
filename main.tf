@@ -70,7 +70,7 @@ resource "aws_dynamodb_table" "transactions" {
     write_capacity  = 5
   }
 
-  stream_enabled = true
+  stream_enabled   = true
   stream_view_type = "NEW_IMAGE"
 
   tags = {
@@ -187,11 +187,39 @@ resource "aws_dynamodb_table" "activity" {
   }
 }
 
+# IAM Policy to allow Lambda to write logs to CloudWatch
+resource "aws_iam_policy" "lambda_logging_policy" {
+  name        = "lambda_logging_policy"
+  description = "IAM policy to allow Lambda to write logs to CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Effect   = "Allow",
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the IAM policy to the IAM role
+resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_logging_policy.arn
+}
+
+
 # DynamoDB IAM Policy
 resource "aws_iam_policy" "dynamodb_policy" {
   name        = "DynamoDBPolicy"
   description = "Policy for accessing DynamoDB tables"
-  policy      = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
@@ -212,7 +240,7 @@ resource "aws_iam_policy" "dynamodb_policy" {
 
 resource "aws_iam_role_policy_attachment" "dynamodb_policy_attachment" {
   role       = aws_iam_role.execution_role.name
-  policy_arn  = aws_iam_policy.dynamodb_policy.arn
+  policy_arn = aws_iam_policy.dynamodb_policy.arn
 }
 
 # Create IAM Role for Lambda
@@ -257,6 +285,23 @@ resource "aws_lambda_function" "payment_lambda_function" {
   source_code_hash = filebase64sha256("packages/payment_lambda_function.zip")
 }
 
+# Lambda Function for POST
+resource "aws_lambda_function" "activity_lambda_function" {
+  filename         = "packages/activity_lambda_function.zip"
+  function_name    = "register-activity"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "dist/activitytHandler.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = filebase64sha256("packages/activity_lambda_function.zip")
+}
+
+# DynamoDB Stream to Lambda Trigger
+resource "aws_lambda_event_source_mapping" "dynamodb_to_lambda" {
+  event_source_arn  = aws_dynamodb_table.transactions.stream_arn
+  function_name     = aws_lambda_function.activity_lambda_function.arn
+  starting_position = "LATEST"
+}
+
 resource "aws_iam_role" "execution_role" {
   name               = "step_function_execution_role"
   assume_role_policy = <<EOF
@@ -277,13 +322,13 @@ EOF
 }
 
 resource "aws_sfn_state_machine" "payment_step_function" {
-  name       = "paymentStateMachine"
+  name     = "paymentStateMachine"
   role_arn = aws_iam_role.execution_role.arn
- definition = jsonencode({
+  definition = jsonencode({
     Comment = "A Step Function that validates input, checks if the user exists, and returns a transactionId message or an error",
     StartAt = "ValidateInput",
     States = {
-     ValidateInput = {
+      ValidateInput = {
         Type = "Choice",
         Choices = [
           {
@@ -299,13 +344,13 @@ resource "aws_sfn_state_machine" "payment_step_function" {
       PrintUserId = {
         Type = "Pass",
         Result = {
-          "userId": "$.userId"
+          "userId" : "$.userId"
         },
         ResultPath = "$.result",
-        Next = "CheckIfUserExists"
+        Next       = "CheckIfUserExists"
       },
       CheckIfUserExists = {
-        Type = "Task",
+        Type     = "Task",
         Resource = "arn:aws:states:::dynamodb:getItem",
         Parameters = {
           TableName = "${aws_dynamodb_table.users.name}",
@@ -316,30 +361,30 @@ resource "aws_sfn_state_machine" "payment_step_function" {
           }
         },
         ResultPath = "$.user",
-        Next = "UserExists"
+        Next       = "UserExists"
       },
       UserExists = {
         Type = "Choice",
         Choices = [
           {
-            Variable = "$.user.Item.userId.S",
+            Variable  = "$.user.Item.userId.S",
             IsPresent = true,
-            Next = "InvokePaymentLambda"
+            Next      = "InvokePaymentLambda"
           }
         ],
         Default = "UserNotFound"
       },
       InvokePaymentLambda = {
-        Type = "Task",
+        Type     = "Task",
         Resource = aws_lambda_function.payment_lambda_function.arn,
         Parameters = {
           amount = "$.amount"
         },
         ResultPath = "$.paymentResult",
-        Next = "ReturnHelloWorld"
+        Next       = "ReturnHelloWorld"
       },
       InsertTransactionRecord = {
-        Type = "Task",
+        Type     = "Task",
         Resource = "arn:aws:states:::dynamodb:putItem",
         Parameters = {
           TableName = "${aws_dynamodb_table.transactions.name}",
@@ -356,23 +401,23 @@ resource "aws_sfn_state_machine" "payment_step_function" {
           }
         },
         ResultPath = "$.transactionResult",
-        Next = "ReturnSuccess"
+        Next       = "ReturnSuccess"
       },
       ReturnSuccess = {
         Type = "Pass",
         Result = {
-          "message": "Transaction recorded successfully"
+          "message" : "Transaction recorded successfully"
         },
         ResultPath = "$.result",
-        End = true
+        End        = true
       },
       InvalidInput = {
-        Type = "Fail",
+        Type  = "Fail",
         Error = "ValidationError",
         Cause = "The userId or amount field is missing"
       },
       UserNotFound = {
-        Type = "Fail",
+        Type  = "Fail",
         Error = "UserNotFound",
         Cause = "The userId does not exist in the users table"
       }
@@ -403,12 +448,12 @@ resource "aws_api_gateway_method" "post_method_step_function" {
 }
 
 resource "aws_api_gateway_integration" "step_function_integration" {
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
-  resource_id = aws_api_gateway_resource.step_function_resource.id
-  http_method = aws_api_gateway_method.post_method_step_function.http_method
-  type        = "AWS"
+  rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
+  resource_id             = aws_api_gateway_resource.step_function_resource.id
+  http_method             = aws_api_gateway_method.post_method_step_function.http_method
+  type                    = "AWS"
   integration_http_method = "POST"
-  uri         = "arn:aws:apigateway:${var.region}:states:action/StartSyncExecution"
+  uri                     = "arn:aws:apigateway:${var.region}:states:action/StartSyncExecution"
 
   request_templates = {
     "application/json" = <<EOF

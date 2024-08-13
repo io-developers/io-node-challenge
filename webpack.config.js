@@ -9,6 +9,7 @@ export default {
     transactionHandler:
       "./src/infrastructure/handlers/transaction/transactionHandler.ts",
     paymentHandler: "./src/infrastructure/handlers/payment/paymentHandler.ts",
+    activityHandler: "./src/infrastructure/handlers/activity/activityHandler.ts",
   },
   output: {
     filename: "[name].js",
