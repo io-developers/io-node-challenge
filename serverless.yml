@@ -1,0 +1,93 @@
+service: technical-io-app
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs18.x
+  environment:
+    TRANSACTIONS_TABLE: transactions
+    USERS_TABLE: users
+    ACTIVITIES_TABLE: activities
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:Query
+        - dynamodb:UpdateItem
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.TRANSACTIONS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.ACTIVITIES_TABLE}
+        - arn:aws:logs:${self:provider.region}:${aws:accountId}:log-group:/aws/lambda/${self:service}*
+    - Effect: Allow
+      Action:
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:DescribeStream
+        - dynamodb:ListStreams
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.TRANSACTIONS_TABLE}/stream/*
+functions:
+  createPayment:
+    handler: dist/payments/infrastructure/PaymentController.createPayment
+    events:
+      - http:
+          path: v1/payments
+          method: post
+  getTransaction:
+    handler: dist/transactions/infrastructure/TransactionController.getTransaction
+    events:
+      - http:
+          path: v1/transactions
+          method: get
+  registerActivity:
+    handler: dist/activity/infrastructure/ActivityController.registerActivity
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionsTable
+              - StreamArn
+
+resources:
+  Resources:
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: transactions
+        AttributeDefinitions:
+          - AttributeName: transactionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: transactionId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: users
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    ActivitiesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: activities
+        AttributeDefinitions:
+          - AttributeName: activityId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: activityId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
