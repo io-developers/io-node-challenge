@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 
 @Controller('v1/transactions')
-export class TransactionsController {
+export class GetTransactionController {
   constructor(
     @Inject('GetTransactionUseCase')
     private readonly _useCase: GetTransactionUseCase,

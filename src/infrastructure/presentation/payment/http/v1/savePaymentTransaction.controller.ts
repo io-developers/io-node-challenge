@@ -9,7 +9,7 @@ import {
 import { SavePaymentTransactionUseCase } from '@application/usecases/payment/savePaymentTransaction.usecase';
 
 @Controller('v1/payments')
-export class PaymentsController {
+export class SavePaymentTransactionController {
   constructor(
     @Inject('SavePaymentTransactionUseCase')
     private readonly _useCase: SavePaymentTransactionUseCase,

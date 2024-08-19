@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { PaymentServiceHttp } from '@infrastructure/service/http/payment.service';
-import { PaymentsController } from '@infrastructure/presentation/payment/http/v1/payment.controller';
+import { SavePaymentTransactionController } from '@infrastructure/presentation/payment/http/v1/savePaymentTransaction.controller';
 import { UserModule } from '@infrastructure/modules/user/user.module';
 import { TransactionModule } from '@infrastructure/modules/transaction/transaction.module';
 import { SavePaymentTransactionUseCase } from '@application/usecases/payment/savePaymentTransaction.usecase';
@@ -13,7 +13,7 @@ import { TransactionServiceHttp } from '@infrastructure/service/http/transaction
 
 @Module({
   imports: [UserModule, TransactionModule, HttpModule],
-  controllers: [PaymentsController],
+  controllers: [SavePaymentTransactionController],
   providers: [
     {
       provide: PaymentServiceHttp,
