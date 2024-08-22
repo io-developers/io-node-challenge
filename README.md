@@ -134,3 +134,77 @@ Respuesta errada (404)
 Cuando termines el reto, luego de forkear el repositorio, debes crear un pull request to our repository indicando en la descripción de este tu nombre y correo.
 
 ### Tiempo de resolución: 3 días
+
+# Datos del Proyecto
+
+## Arquitectura
+Este proyecto sigue los principios de Arquitectura Limpia para asegurar una estructura modular y escalable. La arquitectura se basa en separar las responsabilidades en diferentes capas, cada una con sus propias responsabilidades, para mejorar la mantenibilidad y escalabilidad del sistema.
+
+## Endpoints de prueba:
+- Get-Transactions
+```json
+Curl:
+curl --location 'https://9yp31ebze1.execute-api.us-east-1.amazonaws.com/dev/v1/transactions?transaction_id=8db0a6fc-ad42-4974-ac1f-36bb90730afe'
+```
+```json
+Response:
+{
+"message": "Transaction not found",
+"transactionId": "8db0a6fc-ad42-4974-ac1f-36bb90730afe"
+}
+```
+- Mock-Transaction
+```json
+curl --location 'https://9yp31ebze1.execute-api.us-east-1.amazonaws.com/dev/mock-transaction' \
+--header 'Content-Type: application/json' \
+--data '{
+    "userId" : "2222222"
+}'
+```
+```json
+Response:
+{
+"userId": "2222222",
+"transactionId": "09a9c5ec-71ad-4692-9032-24d364118f71",
+"status": "success"
+}
+```
+
+- Excecute Payments
+```json
+curl --location 'https://9yp31ebze1.execute-api.us-east-1.amazonaws.com/dev/v1/payments' \
+--header 'Content-Type: application/json' \
+--data '{
+    "userId": "15f1c60a-2833-49b7-8660-065b58be2f89"
+}'
+```
+Response:
+```json
+{
+    "billingDetails": {
+        "billedDurationInMilliseconds": 200,
+        "billedMemoryUsedInMB": 64
+    },
+    "executionArn": "arn:aws:states:us-east-1:922367397130:express:bcp_challenged_io_backend:4356725e-e3fb-49bc-b99d-9db7095cc881:dba255ef-e8fe-40bc-8ef4-1a9a628c5dd4",
+    "input": "{\n    \"userId\": \"15f1c60a-2833-49b7-8660-065b58be2f89\"\n}",
+    "inputDetails": {
+        "__type": "com.amazonaws.swf.base.model#CloudWatchEventsExecutionDataDetails",
+        "included": true
+    },
+    "name": "4356725e-e3fb-49bc-b99d-9db7095cc881",
+    "output": "{}",
+    "outputDetails": {
+        "__type": "com.amazonaws.swf.base.model#CloudWatchEventsExecutionDataDetails",
+        "included": true
+    },
+    "startDate": 1.72170984853E9,
+    "stateMachineArn": "arn:aws:states:us-east-1:922367397130:stateMachine:bcp_challenged_io_backend",
+    "status": "SUCCEEDED",
+    "stopDate": 1.721709848725E9
+}
+```
+
+## Inicio Rapido
+```shell
+make all
+```

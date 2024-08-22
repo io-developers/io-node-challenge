@@ -1,0 +1,41 @@
+{
+  "name": "challenge-bcp",
+  "version": "0.0.1",
+  "description": "microservice that query for the transaction id in the transactions table",
+  "main": "handler.js",
+  "scripts": {
+    "format": "prettier --write './**/*.{js,ts}'",
+    "dev": "nodemon",
+    "coverage": "jest --coverage",
+    "build": "rimraf ./dist && tsc --project ./ms-transactions/tsconfig.json && tsc --project ./ms-activity/tsconfig.json && tsc --project ./ms-api-mock/tsconfig.json && tsc --project ./ms-payments/tsconfig.json",
+    "copy:node-modules": "cp -r node_modules dist/ms/get_transactions && cp -r node_modules dist/ms/register_activity && cp -r node_modules dist/ms/api_mock && cp -r node_modules dist/ms/execute_payments",
+    "copy:package-json": "cp -r package.json dist/ms/get_transactions && cp -r package.json dist/ms/register_activity && cp -r package.json dist/ms/api_mock && cp -r package.json dist/ms/execute_payments",
+    "prepare-deploy": "npm install && npm run build && npm run copy:node-modules && npm run copy:package-json",
+    "deploy": "npm run prepare-deploy",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-lambda": "^1.0.7",
+    "aws-sdk": "^2.1659.0",
+    "axios": "^1.7.2",
+    "express": "^4.19.2",
+    "log4js": "^6.9.1",
+    "uuidv4": "^6.2.13"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.141",
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.11",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.2.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  }
+}

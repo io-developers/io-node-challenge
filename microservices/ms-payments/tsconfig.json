@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "declaration": false,
+    "outDir": "../dist/ms/execute_payments"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "test", "**/*spec.ts"]
+}
