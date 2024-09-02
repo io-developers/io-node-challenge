@@ -1,0 +1,233 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  # Step Functions State Machine
+  PaymentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: PaymentStateMachine
+      DefinitionString: !Sub |
+        {
+          "Comment": "Payment processing state machine",
+          "StartAt": "ExecutePayment",
+          "States": {
+            "ExecutePayment": {
+              "Type": "Task",
+              "Resource": "${LambdaExecutePaymentArn}",
+              "Next": "SaveTransaction"
+            },
+            "SaveTransaction": {
+              "Type": "Task",
+              "Resource": "${LambdaSaveTransactionArn}",
+              "Next": "UpdateAccount"
+            },
+            "UpdateAccount": {
+              "Type": "Task",
+              "Resource": "${LambdaUpdateAccountArn}",
+              "Next": "ReturnSuccess"
+            },
+            "ReturnSuccess": {
+              "Type": "Pass",
+              "ResultPath": "$.transactionId",
+              "Parameters": {
+                "message.$": "States.Format('Transaction {0} processed successfully', $.transactionId)"
+              },
+              "End": true
+            }
+          }
+        }
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      DefinitionSubstitutions:
+        LambdaExecutePaymentArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:executePayment"
+        LambdaSaveTransactionArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:saveTransaction"
+        LambdaUpdateAccountArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:updateAccountBalance"
+
+  # IAM Role for Step Functions
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsInvokeLambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource:
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:executePayment"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:saveTransaction"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:updateAccountBalance"
+
+  # Lambda Functions
+  ExecutePaymentFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: executePayment
+      Handler: abono/infrastructure/aws/lambdas/executePayment.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: transactions
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  SaveTransactionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: saveTransaction
+      Handler: abono/infrastructure/aws/lambdas/saveTransaction.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: transactions
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  UpdateAccountBalanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: updateAccountBalance
+      Handler: consulta-cuenta/infrastructure/aws/dynamodb-streams/updateAccountBalance.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: arn:aws:dynamodb:region:account-id:table/transactions/stream/timestamp
+            BatchSize: 10
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  GetAccountBalanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: getAccountBalance
+      Handler: consulta-cuenta/infrastructure/aws/lambdas/getAccountBalance.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: accounts
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  # IAM Role for Lambda Functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "dynamodb:PutItem"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:UpdateItem"
+                Resource:
+                  - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transactions"
+                  - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/accounts"
+
+  # DynamoDB Tables
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: users
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  TransactionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: transactions
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  AccountsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: accounts
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # API Gateway
+  TransactionsApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: TransactionsMockApi
+      Description: API Mock para simular transacciones.
+
+  TransactionsMockResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt TransactionsApi.RootResourceId
+      PathPart: transactions
+      RestApiId: !Ref TransactionsApi
+
+  MockMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref TransactionsMockResource
+      RestApiId: !Ref TransactionsApi
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"message": "Transaction simulated successfully"}'
+      MethodResponses:
+        - StatusCode: 200
