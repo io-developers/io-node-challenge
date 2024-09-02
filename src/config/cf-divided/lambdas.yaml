@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  ExecutePaymentFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: executePayment
+      Handler: abono/infrastructure/aws/lambdas/executePayment.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: transactions
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  SaveTransactionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: saveTransaction
+      Handler: abono/infrastructure/aws/lambdas/saveTransaction.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: transactions
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  UpdateAccountBalanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: updateAccountBalance
+      Handler: consulta-cuenta/infrastructure/aws/dynamodb-streams/updateAccountBalance.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: arn:aws:dynamodb:region:account-id:table/transactions/stream/timestamp
+            BatchSize: 10
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  GetAccountBalanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: getAccountBalance
+      Handler: consulta-cuenta/infrastructure/aws/lambdas/getAccountBalance.handler
+      Runtime: nodejs18.x
+      Code:
+        S3Bucket: your-code-bucket
+        S3Key: your-lambda-code-key.zip
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: accounts
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "dynamodb:PutItem"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:UpdateItem"
+                Resource:
+                  - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/transactions"
+                  - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/accounts"

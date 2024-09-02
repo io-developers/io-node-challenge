@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  PaymentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: PaymentStateMachine
+      DefinitionString: !Sub |
+        {
+          "Comment": "Payment processing state machine",
+          "StartAt": "ExecutePayment",
+          "States": {
+            "ExecutePayment": {
+              "Type": "Task",
+              "Resource": "${LambdaExecutePaymentArn}",
+              "Next": "SaveTransaction"
+            },
+            "SaveTransaction": {
+              "Type": "Task",
+              "Resource": "${LambdaSaveTransactionArn}",
+              "Next": "UpdateAccount"
+            },
+            "UpdateAccount": {
+              "Type": "Task",
+              "Resource": "${LambdaUpdateAccountArn}",
+              "Next": "ReturnSuccess"
+            },
+            "ReturnSuccess": {
+              "Type": "Pass",
+              "ResultPath": "$.transactionId",
+              "Parameters": {
+                "message.$": "States.Format('Transaction {0} processed successfully', $.transactionId)"
+              },
+              "End": true
+            }
+          }
+        }
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      DefinitionSubstitutions:
+        LambdaExecutePaymentArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:executePayment"
+        LambdaSaveTransactionArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:saveTransaction"
+        LambdaUpdateAccountArn: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:updateAccountBalance"
+
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StepFunctionsInvokeLambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource:
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:executePayment"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:saveTransaction"
+                  - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:updateAccountBalance"

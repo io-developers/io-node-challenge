@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  TransactionsApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: TransactionsMockApi
+      Description: API Mock para simular transacciones.
+
+  TransactionsMockResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt TransactionsApi.RootResourceId
+      PathPart: transactions
+      RestApiId: !Ref TransactionsApi
+
+  MockMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ResourceId: !Ref TransactionsMockResource
+      RestApiId: !Ref TransactionsApi
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: '{"message": "Transaction simulated successfully"}'
+      MethodResponses:
+        - StatusCode: 200
