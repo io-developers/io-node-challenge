@@ -1,0 +1,13 @@
+Prerequisitos
+- Terraform
+- Node
+- Setup aws configure in AWS CLI
+- Git Bash
+
+Deploy de Infraestructura
+- npm run build
+- cdktf get
+- cdktf deploy
+
+Eliminar Infraestructura
+- cdktf destroy
