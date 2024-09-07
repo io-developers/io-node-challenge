@@ -1,6 +1,6 @@
 import validate from "uuid";
 
-export class UserId {
+export class AccountId {
   value: string;
 
   constructor(value: string) {

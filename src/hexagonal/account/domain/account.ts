@@ -1,10 +1,10 @@
-import { UserAmout } from "./value-object/user-amout.vo";
-import { UserId } from "./value-object/user-id.vo";
+import { AccountAmout } from "./value-object/account-amout.vo";
+import { AccountId } from "./value-object/account-id.vo";
 
 export class Account {
-  id: UserId;
-  amount: UserAmout;
-  constructor(id: UserId, amount: UserAmout) {
+  id: AccountId;
+  amount: AccountAmout;
+  constructor(id: AccountId, amount: AccountAmout) {
     this.id = id;
     this.amount = amount;
   }

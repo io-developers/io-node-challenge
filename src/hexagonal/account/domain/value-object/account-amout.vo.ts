@@ -1,4 +1,4 @@
-export class UserAmout {
+export class AccountAmout {
   value: number;
 
   constructor(value: number) {
