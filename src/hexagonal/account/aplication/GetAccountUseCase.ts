@@ -6,9 +6,10 @@ import { AccountId } from "../domain/value-object/account-id.vo";
 export class GetAccountUseCase {
   constructor(private repository: AccountRepository) {}
 
-  async execute(id: string): Promise<Account | null> {
+  async execute(id: string): Promise<Account> {
     const accountId = new AccountId(id);
-    const account = this.repository.getOneById(accountId);
+    const account = await this.repository.getOneById(accountId);
+
     if (!account) {
       throw new AccountNotFoundError("Account not found");
     }
