@@ -7,9 +7,15 @@
     "test": "jest",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write 'src/**/*.ts' --config ./.prettierrc",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev": "npx tsc --watch",
+    "start": "node dist/index.js",
+    "build": "npx tsc"
   },
-  "dependencies": {},
+  "dependencies": {
+    "express": "^4.19.2",
+    "reflect-metadata": "^0.2.2"
+  },
   "devDependencies": {
     "@types/aws-lambda": "8.10.130",
     "@types/jest": "29.5.5",
