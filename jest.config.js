@@ -3,7 +3,7 @@ module.exports = {
   collectCoverage: true,
   verbose: true,
   passWithNoTests: true,
-  testMatch: ["**/*.(test|steps).+(ts|tsx|js)"],
+  testMatch: ["**/*.(test|steps|spec).+(ts|tsx|js)"],
   setupFiles: ["dotenv/config"],
   coveragePathIgnorePatterns: ["/node_modules/", "/test/", "/dist/"],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
