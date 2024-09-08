@@ -24,12 +24,3 @@ export class Transaction{
         }
     }
 }
-
-{
-    "source": "{uuid}",
-    "id": "{id}",
-    "data": {
-        "accountId": "{id}",
-        "amount": "{number}"
-    }
-}

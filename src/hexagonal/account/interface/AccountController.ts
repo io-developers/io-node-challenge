@@ -1,6 +1,6 @@
-import { DependencyInjecttionContainer } from "../DependencyInjecttionContainer";
 import { Request, Response, NextFunction } from "express";
 import { AccountNotFoundError } from "../domain/AccountNotFoundError";
+import { DependencyInjecttionContainer } from "../../DependencyInjecttionContainer";
 
 export class AccountController {
   async getOne(req: Request, res: Response, next: NextFunction) {
