@@ -3,38 +3,38 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
 export class StfExecutePaymentLambda extends Construct {
-  task1Function: NodejsFunction;
+  getAccountFunction: NodejsFunction;
 
-  task2Function: NodejsFunction;
+  executePaymentFunction: NodejsFunction;
 
-  task3Function: NodejsFunction;
+  saveTransactionFunction: NodejsFunction;
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
 
-    const task1Function = new NodejsFunction(this, 'Task1NodeJsFunction', {
-      description: 'Task1',
+    const getAccountFunction = new NodejsFunction(this, 'GetAccountFunction', {
+      description: 'Task1 - get-account',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'handler',
-      entry: `lib/contexts/payments/application/use-cases/task1.ts`,
+      entry: `lib/contexts/payments/application/use-cases/get-account.ts`,
     });
 
-    const task2Function = new NodejsFunction(this, 'Task2NodeJsFunction', {
-      description: 'Task2',
+    const executePaymentFunction = new NodejsFunction(this, 'ExecutePaymentFunction', {
+      description: 'Task2 - execute-payment',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'handler',
-      entry: `lib/contexts/payments/application/use-cases/task2.ts`,
+      entry: `lib/contexts/payments/application/use-cases/execute-payment.ts`,
     });
 
-    const task3Function = new NodejsFunction(this, 'Task3NodeJsFunction', {
-      description: 'Task3',
+    const saveTransactionFunction = new NodejsFunction(this, 'SaveTransactionFunction', {
+      description: 'Task3 - save-transaction',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'handler',
-      entry: `lib/contexts/payments/application/use-cases/task3.ts`,
+      entry: `lib/contexts/payments/application/use-cases/save-transaction.ts`,
     });
 
-    this.task1Function = task1Function;
-    this.task2Function = task2Function;
-    this.task3Function = task3Function;
+    this.getAccountFunction = getAccountFunction;
+    this.executePaymentFunction = executePaymentFunction;
+    this.saveTransactionFunction = saveTransactionFunction;
   }
 }

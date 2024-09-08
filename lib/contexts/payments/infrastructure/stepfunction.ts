@@ -19,17 +19,17 @@ export class StepFunctionExecutePayment extends Construct {
 
   stepfunctions() {
     const task1 = new tasks.LambdaInvoke(this, 'Task1', {
-      lambdaFunction: this.stepFunctionExecutePayment.task1Function,
+      lambdaFunction: this.stepFunctionExecutePayment.getAccountFunction,
       outputPath: '$.Payload',
     });
 
     const task2 = new tasks.LambdaInvoke(this, 'Task2', {
-      lambdaFunction: this.stepFunctionExecutePayment.task2Function,
+      lambdaFunction: this.stepFunctionExecutePayment.executePaymentFunction,
       outputPath: '$.Payload',
     });
 
     const task3 = new tasks.LambdaInvoke(this, 'Task3', {
-      lambdaFunction: this.stepFunctionExecutePayment.task3Function,
+      lambdaFunction: this.stepFunctionExecutePayment.saveTransactionFunction,
       outputPath: '$.Payload',
     });
 
