@@ -1,4 +1,4 @@
-import validate from "uuid";
+import { validate as uuidValidate } from 'uuid';
 
 export class AccountId {
   value: string;
@@ -9,8 +9,8 @@ export class AccountId {
   }
 
   private isUuid() {
-    if (!validate(this.value)) {
-      throw new Error("el valor debe ser de tipo uuid");
+    if (!uuidValidate(this.value)) {
+      throw new Error("el id debe ser de tipo uuid");
     }
   }
 }
