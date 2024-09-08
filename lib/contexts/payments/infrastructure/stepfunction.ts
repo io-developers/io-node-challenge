@@ -18,17 +18,17 @@ export class StepFunctionExecutePayment extends Construct {
   }
 
   stepfunctions() {
-    const task1 = new tasks.LambdaInvoke(this, 'Task1', {
+    const task1 = new tasks.LambdaInvoke(this, 'Task1-get-account', {
       lambdaFunction: this.stepFunctionExecutePayment.getAccountFunction,
       outputPath: '$.Payload',
     });
 
-    const task2 = new tasks.LambdaInvoke(this, 'Task2', {
+    const task2 = new tasks.LambdaInvoke(this, 'Task2-execute-payment', {
       lambdaFunction: this.stepFunctionExecutePayment.executePaymentFunction,
       outputPath: '$.Payload',
     });
 
-    const task3 = new tasks.LambdaInvoke(this, 'Task3', {
+    const task3 = new tasks.LambdaInvoke(this, 'Task3-save-transaction', {
       lambdaFunction: this.stepFunctionExecutePayment.saveTransactionFunction,
       outputPath: '$.Payload',
     });
@@ -52,6 +52,12 @@ export class StepFunctionExecutePayment extends Construct {
       );
 
     const definition = task1.next(parseBody).next(choiceState);
+
+    // const definition = sfn.DefinitionBody.fromChainable(
+    //   new sfn.Map(this, 'For each SOAP generation request', {
+    //     itemsPath: '$.Execution.Input',
+    //   }).itemProcessor(task1.next(parseBody).next(task2).next(task3)),
+    // );
 
     this.usersStateMachine = new sfn.StateMachine(this, 'ExePaymentStateMachine', {
       definition,

@@ -1,15 +1,40 @@
 import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { Construct } from 'constructs';
 
 export class PaymentGateway extends Construct {
-  constructor(scope: Construct, id: string, usersStateMachine: sfn.StateMachine) {
+  constructor(
+    scope: Construct,
+    id: string,
+    usersStateMachine: sfn.StateMachine,
+    hostedZone: route53.HostedZone,
+    apicertificate: acm.Certificate,
+    domainName: string,
+  ) {
     super(scope, id);
 
     const api = new apiGateway.RestApi(this, 'PaymentApi', {
       restApiName: 'Payment API',
       description: 'Backend - Payment API',
+    });
+
+    // Custom Domain
+    api.addDomainName(domainName, {
+      domainName,
+      securityPolicy: apiGateway.SecurityPolicy.TLS_1_2,
+      certificate: apicertificate,
+    });
+
+    // Route53 DNS
+    // eslint-disable-next-line no-new
+    new route53.ARecord(this, 'domain_alias_record', {
+      recordName: domainName,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.ApiGateway(api)),
     });
 
     // Permisos para que API Gateway pueda invocar la Step Function
