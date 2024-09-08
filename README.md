@@ -105,9 +105,9 @@ Request Body: {
 ### Datos de Prueba
 
 A continuación, se adjuntan algunos accountId para pruebas:
-. 123e4567-e89b-12d3-a456-426614174000
-. 123e4567-e89b-12d3-a456-426614174001
-. 123e4567-e89b-12d3-a456-426614174005
+- 123e4567-e89b-12d3-a456-426614174000
+- 123e4567-e89b-12d3-a456-426614174001
+- 123e4567-e89b-12d3-a456-426614174005
 
 ### Hecho por
 Jonathan Reyna
