@@ -15,7 +15,7 @@ export class AccountDynamoDBRepository implements AccountRepository {
         try {
             logger.info('Initializing AccountDynamoDBRepository...');
             logger.info(`AWS_REGION: ${process.env.LAMBDA_AWS_REGION}`);
-            logger.info(`ACCOUNT_TABLE_NAME: ${process.env.LAMBDA_ACCOUNT_TABLE_NAME}`);
+            logger.info(`ACCOUNT_TABLE_NAME: ${process.env.ACCOUNT_TABLE_NAME}`);
 
             // Configurar el SDK de AWS
             AWS.config.update({

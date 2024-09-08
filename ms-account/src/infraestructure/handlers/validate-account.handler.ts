@@ -24,7 +24,7 @@ export const validateAccountHandler = async (event: APIGatewayProxyEvent): Promi
   const data = await validateAccountUsecase.execute(accountId);
   logger.info('validateAccountHandler executed successfully:', { data });
   return {
-    statusCode: data.status === 'OK' ? 200 : 404,
+    statusCode: data.status === 'OK' ? 200 : 400,
     body: JSON.stringify(data),
   };
 };

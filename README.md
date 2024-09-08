@@ -50,12 +50,37 @@ las carpetas dist que se generan con todo el código transpilado a Javascript.
 Utilizar de preferencia la ruta lambda_zip para poder guardar los archivos zip que luego se referenciaran en el archivo de
 configuración de lambdas de terraform, ubicados en la carpeta con el mismo nombre. 
 
-### Tablas DynamoDB
+### Configuración AWS
 
-Se utilizaron dos tablas en DynamoDB:
+Revisar el archivo variables.tf ubicado en la carpeta terraform, colocar los parámetros de conexión para usar los servicios de AWS: Como Clave de Acceso y Clave Secreta de Acceso
 
-accounts
-transactions
+```sh
+variable "region" {
+  default = "us-west-2" #Colocar la región de AWS que usarás
+}
+
+variable "access_key" {
+  default = ""  #Colocar tu Access Key de AWS
+}
+
+variable "secret_access_key" {
+  default = ""  #Colocar tu Secret Key de AWS
+}
+
+variable "account_table_name" {
+  default = "accounts" #Nombre de la tabla dynamoDB para cuentas de usuario
+}
+
+variable "transaction_table_name" {
+  default = "transactions" #Nombre de la tabla dynamoDB para transacciones
+}
+
+variable "devops_role_arn" {
+  description = "ARN of the existing IAM role for Lambda"
+  type        = string
+  default = "arn:aws:iam::772466482736:role/devops" #ARN del rol que usarás para utilizar los servicios AWS
+}
+```
 
 ### Datos de Prueba
 

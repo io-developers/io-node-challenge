@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TransactionProcessUsecase } from '../src/application/usecases/transaction-process.usecase';
 import { transactionProcessHandler } from './../src/infraestructure/handlers/transaction-process.handler';
-// transaction-process.handler.test.ts
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
 
@@ -56,10 +56,10 @@ describe('transactionProcessHandler', () => {
 
     const result = await transactionProcessHandler(event);
     expect(result.statusCode).toBe(200);
-
+    expect(JSON.parse(result.body)).toEqual({ status: 'SUCCESS' });
   });
 
-  it('should return 404 if transaction fails', async () => {
+  it('should return 400 if transaction fails', async () => {
     executeSpy.mockResolvedValue({ status: 'FAILURE' });
 
     const event: APIGatewayProxyEvent = {
@@ -79,7 +79,7 @@ describe('transactionProcessHandler', () => {
 
     const result = await transactionProcessHandler(event);
 
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ status: 'FAILURE' });
   });
 });

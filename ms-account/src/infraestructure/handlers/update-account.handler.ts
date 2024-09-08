@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { APIGatewayProxyEvent, APIGatewayProxyResult, DynamoDBStreamEvent } from 'aws-lambda';
+import { DynamoDBStreamEvent } from 'aws-lambda';
 import { container } from '../containers/inversify.container';
 import { TYPES } from "../containers/inversify.constant";
 import dotenv from 'dotenv';
@@ -20,7 +20,7 @@ export const updateAccountHandler = async (event: DynamoDBStreamEvent) => {
   for (const record of event.Records) {
     if (record.eventName === 'INSERT') {
       const newImage = record.dynamodb?.NewImage || undefined;
-      const transactionData = newImage?.['data'] as { accountId: AttributeValue, amount: AttributeValue } || undefined;
+      const transactionData = newImage?.['data']?.['M'] as { accountId: AttributeValue, amount: AttributeValue } || undefined;
       if (!transactionData) {
         logger.error(`Invalid record: ${record}`);
         continue; // Skip this record and move to the next
@@ -32,19 +32,19 @@ export const updateAccountHandler = async (event: DynamoDBStreamEvent) => {
       try {
         const errors: ValidationError[] = await validate(dto);
         if (errors.length > 0) {
-          logger.error(`Validation errors: ${errors.map(e => e.constraints)}`);
+          logger.error(`Validation errors: ${JSON.stringify(errors.map(e => e.constraints))}`);
           continue; // Skip this record and move to the next
         }
 
         const data = await updateAccountUseCase.execute(dto.accountId as string, dto.amount as number);
         if (data.status !== 'OK') {
-          logger.error(`Failed to update account: ${data}`);
+          logger.error(`Failed to update account: ${JSON.stringify(data)}`);
         } else {
           logger.info('updateAccountHandler executed successfully:', { data });
         }
 
       } catch (error) {
-        logger.error(`Error processing record: ${error}`);
+        logger.error(`Error processing record: ${JSON.stringify(error)}`);
       }
     }
   }

@@ -17,12 +17,12 @@ export class GetAccountUsecase {
       const validatedUser = await this.accountRepository.getAccount(accountId);
       logger.info('Account obtained', { accountId });
       if(!validatedUser) {
-        return new AccountObtainedResDto({message: 'Account not found', status: 'ERROR'});
+        return new AccountObtainedResDto({});
       }
-      return new AccountObtainedResDto({message: 'Account obtained', account: validatedUser, status: 'OK'});
+      return new AccountObtainedResDto({id: validatedUser.id, amount: validatedUser.amount.toString()});
     } catch (error) {
       logger.error('Error obtaining account:', error as string | Error);
-      return new AccountObtainedResDto({message: 'Error', status: 'ERROR'});
+      return new AccountObtainedResDto({});
     }
 
   }

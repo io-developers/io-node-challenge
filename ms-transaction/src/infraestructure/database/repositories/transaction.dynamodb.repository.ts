@@ -40,7 +40,7 @@ export class TransactionDynamoDBRepository implements TransactionRepository {
         }
     }
 
-    async createTransaction(dataTransaction: Transaction): Promise<void> {
+    async createTransaction(dataTransaction: Transaction): Promise<Transaction> {
         try {
             const transaction: Transaction = {
                 source: randomUUID(),
@@ -52,6 +52,7 @@ export class TransactionDynamoDBRepository implements TransactionRepository {
                 Item: transaction
             };
             await this.dynamoDB.put(params).promise();
+            return transaction;
         } catch (error) {
             logger.error(`Error creating transaction: ${error}`);
             throw error;

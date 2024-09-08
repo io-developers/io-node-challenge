@@ -82,9 +82,10 @@ resource "aws_lambda_function" "update_account" {
   filename         = "../lambda-zip/ms-account.zip"
   function_name    = "updateAccountHandler"
   role             = var.devops_role_arn
-  handler          = "index.updateAccountLambdaHandler"
+  handler          = "index.updateAccountDynamoStreamHandler"
   runtime          = "nodejs20.x"
   source_code_hash = filebase64sha256("../lambda-zip/ms-account.zip")
+  timeout          = 30
   environment {
     variables = {
       LAMBDA_AWS_REGION = var.region

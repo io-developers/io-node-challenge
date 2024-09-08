@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getAccountHandler } from './../src/infraestructure/handlers/get-account.handler';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { GetAccountUsecase } from './../src/application/usecases/get-account.usecase';
@@ -13,7 +14,7 @@ describe('getAccountHandler', () => {
     jest.clearAllMocks();
   });
 
-  it('should return 400 if accountId is missing', async () => {
+  it('should return 404 if accountId is missing', async () => {
     const event: APIGatewayProxyEvent = {
       body: null,
       headers: {},
@@ -31,12 +32,12 @@ describe('getAccountHandler', () => {
 
     const result = await getAccountHandler(event);
 
-    expect(result.statusCode).toBe(400);
+    expect(result.statusCode).toBe(404);
     expect(JSON.parse(result.body)).toEqual({ message: 'Missing accountId parameter' });
   });
 
   it('should return 200 if account is found', async () => {
-    executeSpy.mockResolvedValue({ status: 'OK', account: { id: '123', name: 'Test Account' } });
+    executeSpy.mockResolvedValue({ id: "123", amount: "100" });
 
     const event: APIGatewayProxyEvent = {
       body: null,
@@ -56,11 +57,11 @@ describe('getAccountHandler', () => {
     const result = await getAccountHandler(event);
 
     expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body)).toEqual({ status: 'OK', account: { id: '123', name: 'Test Account' } });
+    expect(JSON.parse(result.body)).toEqual({ id: "123", amount: "100" });
   });
 
   it('should return 404 if account is not found', async () => {
-    executeSpy.mockResolvedValue({ status: 'NOT_FOUND' });
+    executeSpy.mockResolvedValue({ mesage: 'Account not found' });
 
     const event: APIGatewayProxyEvent = {
       body: null,
@@ -80,6 +81,6 @@ describe('getAccountHandler', () => {
     const result = await getAccountHandler(event);
 
     expect(result.statusCode).toBe(404);
-    expect(JSON.parse(result.body)).toEqual({ status: 'NOT_FOUND' });
+    expect(JSON.parse(result.body)).toEqual({ mesage: 'Account not found' });
   });
 });

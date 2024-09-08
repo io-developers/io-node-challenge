@@ -17,11 +17,11 @@ export class CreateTransactionUsecase {
   async execute(dto: CreateTransactionReqDto): Promise<CreatedTransactionResDto> {
     try {
       const transaction: Transaction = { id: dto.transactionCode, data: { accountId: dto.accountId, amount: dto.amount } };
-      await this.transactionRepository.createTransaction(transaction);
-      return new CreatedTransactionResDto({ status: 'OK', message: 'Created transaction', transaction });
+      const transactionCreated = await this.transactionRepository.createTransaction(transaction);
+      return new CreatedTransactionResDto({ transactionId: transactionCreated.source || ''});
     } catch (error) {
       logger.error(`Error creating transaction ${error}`);
-      return new CreatedTransactionResDto({ message: 'Error', status: 'ERROR' });
+      return new CreatedTransactionResDto({});
     }
 
   }

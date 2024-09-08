@@ -1,22 +1,48 @@
 resource "aws_sfn_state_machine" "payment_state_machine" {
   name     = "PaymentStateMachine"
   role_arn = var.devops_role_arn
+  type     = "EXPRESS"  # Cambiar el tipo a EXPRESS
 
   definition = <<EOF
 {
   "Comment": "State machine for processing payments",
-  "StartAt": "ValidateAccount",
+  "StartAt": "CheckPaymentParameters",
   "States": {
+    "CheckPaymentParameters": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.amount",
+              "IsPresent": true
+            },
+            {
+              "Variable": "$.accountId",
+              "IsPresent": true
+            }
+          ],
+          "Next": "ValidateAccount"
+        }
+      ],
+      "Default": "InputError"
+    },
     "ValidateAccount": {
       "Type": "Task",
       "Resource": "${aws_lambda_function.validate_account.arn}",
       "Parameters": {
         "pathParameters": {
-          "accountId.$": "$.body.accountId"
+          "accountId.$": "$.accountId"
         }
       },
       "ResultPath": "$.validationResult",
-      "Next": "CheckValidationResult"
+      "Next": "CheckValidationResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "InputError"
+        }
+      ]
     },
     "CheckValidationResult": {
       "Type": "Choice",
@@ -34,12 +60,18 @@ resource "aws_sfn_state_machine" "payment_state_machine" {
       "Resource": "${aws_lambda_function.execute_payment.arn}",
       "Parameters": {
         "body": {
-          "amount.$": "$.body.amount",
-          "accountId.$": "$.body.accountId"
+          "amount.$": "$.amount",
+          "accountId.$": "$.accountId"
         }
       },
       "ResultPath": "$.paymentResult",
-      "Next": "ParsePaymentResult"
+      "Next": "ParsePaymentResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "InputError"
+        }
+      ]
     },
     "ParsePaymentResult": {
       "Type": "Pass",
@@ -65,15 +97,29 @@ resource "aws_sfn_state_machine" "payment_state_machine" {
       "Resource": "${aws_lambda_function.save_transaction.arn}",
       "Parameters": {
         "body": {
-          "accountId.$": "$.body.accountId",
+          "accountId.$": "$.accountId",
           "transactionCode.$": "$.parsedPaymentResult.parsedBody.transactionCode",
           "amount.$": "$.parsedPaymentResult.parsedBody.amount"
         }
       },
       "ResultPath": "$.transactionResult",
+      "Next": "ParseTransactionResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "InputError"
+        }
+      ]
+    },
+    "ParseTransactionResult": {
+      "Type": "Pass",
+      "Parameters": {
+        "parsedBody.$": "States.StringToJson($.transactionResult.body)"
+      },
+      "ResultPath": "$.parsedTransactionResult",
       "Next": "CheckRecordTransactionResult"
     },
-      "CheckRecordTransactionResult": {
+    "CheckRecordTransactionResult": {
       "Type": "Choice",
       "Choices": [
         {
@@ -83,6 +129,11 @@ resource "aws_sfn_state_machine" "payment_state_machine" {
         }
       ],
       "Default": "TransactionFailed"
+    },
+    "InputError": {
+      "Type": "Fail",
+      "Error": "InputError",
+      "Cause": "The input provided was malformed."
     },
     "ValidationFailed": {
       "Type": "Fail",
@@ -101,7 +152,7 @@ resource "aws_sfn_state_machine" "payment_state_machine" {
     },
     "Success": {
       "Type": "Succeed",
-      "OutputPath": "$.transactionResult"
+      "OutputPath": "$.parsedTransactionResult.parsedBody"
     }
   }
 }

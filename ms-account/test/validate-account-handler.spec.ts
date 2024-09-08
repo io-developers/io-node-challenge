@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { validateAccountHandler } from './../src/infraestructure/handlers/validate-account.handler';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { ValidateAccountUsecase } from '../src/application/usecases/validate-account.usecase';
@@ -59,7 +60,7 @@ describe('validateAccountHandler', () => {
     expect(JSON.parse(result.body)).toEqual({ status: 'OK', account: { id: '123', name: 'Valid Account' } });
   });
 
-  it('should return 404 if account is not valid', async () => {
+  it('should return 400 if account is not valid', async () => {
     executeSpy.mockResolvedValue({ status: 'NOT_FOUND' });
 
     const event: APIGatewayProxyEvent = {
@@ -79,7 +80,7 @@ describe('validateAccountHandler', () => {
 
     const result = await validateAccountHandler(event);
 
-    expect(result.statusCode).toBe(404);
+    expect(result.statusCode).toBe(400);
     expect(JSON.parse(result.body)).toEqual({ status: 'NOT_FOUND' });
   });
 });

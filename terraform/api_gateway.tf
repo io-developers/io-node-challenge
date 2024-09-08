@@ -45,17 +45,18 @@ resource "aws_api_gateway_method" "post_payment" {
 }
 
 resource "aws_api_gateway_integration" "post_payment" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.payments.id
-  http_method = aws_api_gateway_method.post_payment.http_method
-  type        = "AWS"
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.payments.id
+  http_method             = aws_api_gateway_method.post_payment.http_method
+  type                    = "AWS"
   integration_http_method = "POST"
-  uri         = "arn:aws:apigateway:${var.region}:states:action/StartExecution"
-  credentials = var.devops_role_arn
+  uri                     = "arn:aws:apigateway:${var.region}:states:action/StartSyncExecution"
+  credentials             = var.devops_role_arn
+
   request_templates = {
     "application/json" = <<EOF
 {
-  "input": "{\"body\": $util.escapeJavaScript($input.json('$'))}",
+  "input": "$util.escapeJavaScript($input.json('$'))",
   "stateMachineArn": "${aws_sfn_state_machine.payment_state_machine.arn}"
 }
 EOF
@@ -64,6 +65,7 @@ EOF
 }
 
 resource "aws_api_gateway_method_response" "post_payment_200" {
+  depends_on = [aws_api_gateway_integration.post_payment]
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.payments.id
   http_method = aws_api_gateway_method.post_payment.http_method
@@ -71,26 +73,11 @@ resource "aws_api_gateway_method_response" "post_payment_200" {
 
   response_models = {
     "application/json" = "Empty"
-  }
-}
-
-resource "aws_api_gateway_integration_response" "post_payment_200" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.payments.id
-  http_method = aws_api_gateway_method.post_payment.http_method
-  status_code = "200"
-  response_templates = {
-    "application/json" = <<EOF
-#set($inputRoot = $input.path('$'))
-{
-  "message": "$inputRoot.message",
-  "transactionId": "$inputRoot.transactionId"
-}
-EOF
   }
 }
 
 resource "aws_api_gateway_method_response" "post_payment_201" {
+  depends_on = [aws_api_gateway_integration.post_payment]
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.payments.id
   http_method = aws_api_gateway_method.post_payment.http_method
@@ -98,26 +85,11 @@ resource "aws_api_gateway_method_response" "post_payment_201" {
 
   response_models = {
     "application/json" = "Empty"
-  }
-}
-
-resource "aws_api_gateway_integration_response" "post_payment_201" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.payments.id
-  http_method = aws_api_gateway_method.post_payment.http_method
-  status_code = "201"
-  response_templates = {
-    "application/json" = <<EOF
-#set($inputRoot = $input.path('$'))
-{
-  "message": "Payment registered successfully",
-  "transactionId": "$inputRoot.transactionCode"
-}
-EOF
   }
 }
 
 resource "aws_api_gateway_method_response" "post_payment_400" {
+  depends_on = [aws_api_gateway_integration.post_payment]
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.payments.id
   http_method = aws_api_gateway_method.post_payment.http_method
@@ -128,43 +100,38 @@ resource "aws_api_gateway_method_response" "post_payment_400" {
   }
 }
 
-resource "aws_api_gateway_integration_response" "post_payment_400" {
+resource "aws_api_gateway_integration_response" "post_payment_response" {
+  depends_on = [aws_api_gateway_integration.post_payment]
+
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.payments.id
   http_method = aws_api_gateway_method.post_payment.http_method
-  status_code = "400"
-  selection_pattern = ".*"
+  status_code = "200"  # Agrega esta línea
+
   response_templates = {
     "application/json" = <<EOF
-{
-  "message": "Something was wrong"
-}
-EOF
+#if($input.path('$.status').toString().equals("SUCCEEDED"))
+  #set($context.responseOverride.status = 201)
+  #set($parsedPayload = $util.parseJson($input.path('$.output')))
+  {
+    "message": "Payment registered successfully",
+    "transactionId": "$parsedPayload.transactionId"
   }
-}
-
-resource "aws_api_gateway_method_response" "post_payment_500" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.payments.id
-  http_method = aws_api_gateway_method.post_payment.http_method
-  status_code = "500"
-
-  response_models = {
-    "application/json" = "Empty"
-  }
-}
-
-resource "aws_api_gateway_integration_response" "post_payment_500" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_resource.payments.id
-  http_method = aws_api_gateway_method.post_payment.http_method
-  status_code = "500"
-  selection_pattern = ".*"
-  response_templates = {
-    "application/json" = <<EOF
-{
-  "message": "Internal Server Error"
-}
+#else
+  #if($input.path('$.status').toString().equals("FAILED"))
+    #set($context.responseOverride.status = 400)
+    {
+      "message": "Something was wrong"
+    }
+  #else
+    #set($context.responseOverride.status = 500)
+    {
+      "statusCode": 500,
+      "errorType": "InternalServer",
+      "message": "Internal Server Error"
+    }
+  #end
+#end
 EOF
   }
 }

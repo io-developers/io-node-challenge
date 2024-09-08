@@ -1,15 +1,13 @@
-import { Account } from "../../../domain/interface/account.interface";
-
-
 export class AccountObtainedResDto {
-
-    status: string;
-    message: string;
-    account?: Account;
+    message?: string;
+    id?: string;
+    amount?: string;
     constructor(partial: Partial<AccountObtainedResDto>) {
-
-        this.status = partial.status || 'failure';
-        this.message = partial.message || 'Transaction failed';
-        if(partial.account) this.account = partial.account;
+        if(partial.id) {   
+            this.id = partial.id
+            this.amount = partial.amount;
+        } else {
+            this.message = partial.message || 'Account not found';
+        }
     }
 }

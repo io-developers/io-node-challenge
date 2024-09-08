@@ -5,6 +5,7 @@ import { TYPES } from "../containers/inversify.constant";
 import dotenv from 'dotenv';
 import { GetAccountUsecase } from "../../application/usecases/get-account.usecase";
 import { Logger } from "@aws-lambda-powertools/logger";
+import { AccountObtainedResDto } from "../../application/dtos/response/account-obtained.res.dto";
 dotenv.config();
 
 const logger = new Logger({ serviceName: 'GetAccountHandler' });
@@ -17,14 +18,14 @@ export const getAccountHandler = async (event: APIGatewayProxyEvent): Promise<AP
   if (!accountId) {
     logger.error('Missing accountId parameter');
     return {
-      statusCode: 400,
-      body: JSON.stringify({ message: 'Missing accountId parameter' }),
+      statusCode: 404,
+      body: JSON.stringify(new AccountObtainedResDto({message: 'Missing accountId parameter'})),
     };
   }
   const data = await getAccountUsecase.execute(accountId);
   logger.info('getAccountHandler executed successfully:', { data });
   return {
-    statusCode: data.status === 'OK' ? 200 : 404,
+    statusCode: data.id ? 200 : 404,
     body: JSON.stringify(data),
   };
 };
