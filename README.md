@@ -134,3 +134,9 @@ Respuesta errada (404)
 Cuando termines el reto, luego de forkear el repositorio, debes crear un pull request to our repository indicando en la descripción de este tu nombre y correo.
 
 ### Tiempo de resolución: 3 días
+
+
+    
+``
+"lambda:package": "npm run build && zip -r lambda-deploy.zip dist node_modules"
+``

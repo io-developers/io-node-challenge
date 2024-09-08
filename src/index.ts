@@ -1,4 +1,4 @@
-import * as express from "express";
+import express from "express";
 import { Request, Response, NextFunction } from "express";
 import { AccountController } from "./hexagonal/account/interface/AccountController";
 import { TransactionController } from "./hexagonal/transaction/infraestructure/TransactionController";
@@ -23,6 +23,7 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   return res.status(500).json({ message: "Something was wrong" });
 });
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+// app.listen(3000, () => {
+//   console.log("Server is running on port 3000");
+// });
+export default app;

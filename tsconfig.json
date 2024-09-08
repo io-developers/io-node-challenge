@@ -10,10 +10,10 @@
     "moduleResolution": "node",
     "lib": ["es2016", "ES2019", "DOM"],
     "types": ["reflect-metadata", "aws-lambda", "jest", "node"],
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "resolveJsonModule": true,
     "strictNullChecks": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }
