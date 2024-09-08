@@ -2,7 +2,7 @@ import { CreateAccountUseCase } from "./account/aplication/CreateAccountUseCase"
 import { GetAccountUseCase } from "./account/aplication/GetAccountUseCase";
 import { UpdateAccountUseCase } from "./account/aplication/UpdateAccountUseCase";
 import { InMemoryAccountRepository } from "./account/interface/InMemoryAccountRepository";
-import { ExecutePaymentUseCase } from "./transaction/aplication/executePaymentUseCase";
+import { ExecutePaymentUseCase } from "./transaction/aplication/ExecutePaymentUseCase";
 import { GetPaymentUseCase } from "./transaction/aplication/GetPaymentUseCase";
 import { InMemoryTransactionRepository } from "./transaction/infraestructure/InMemoryTransactionRepository";
 

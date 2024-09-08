@@ -1,9 +1,10 @@
 import { DependencyInjecttionContainer } from "../../DependencyInjecttionContainer";
 import { TransactionNotFoundError } from "../domain/TransactionNotFoundError";
+import { Request, Response, NextFunction } from "express";
 
 export class TransactionController {
-  async getOne(req, res, next) {
-    const { id } = req.parmas;
+  async getOne(req: Request, res: Response, next: NextFunction) {
+    const { id } = req.params;
 
     try {
       const transaction =
