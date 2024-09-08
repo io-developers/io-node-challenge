@@ -82,6 +82,26 @@ variable "devops_role_arn" {
 }
 ```
 
+### Api Gateway de Testing
+
+https://r76axl7c6f.execute-api.us-west-2.amazonaws.com
+
+```sh
+API URL 
+https://r76axl7c6f.execute-api.us-west-2.amazonaws.com
+
+GET:
+https://r76axl7c6f.execute-api.us-west-2.amazonaws.com/{accountId}
+
+POST:
+https://r76axl7c6f.execute-api.us-west-2.amazonaws.com
+
+Request Body: {
+  "accountId": "123e4567-e89b-12d3-a456-426614174000",
+  "amount": 100
+}
+```
+
 ### Datos de Prueba
 
 A continuación, se adjuntan algunos accountId para pruebas:
