@@ -1,0 +1,65 @@
+Resources:
+  PayBalanceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:custom.rolName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - states.amazonaws.com
+                - apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PayBalanceLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:DescribeStream
+                  - dynamodb:ListStreams
+                Resource:
+                  - arn:aws:dynamodb:us-east-2:${self:custom.accountId}:table/${self:custom.accountsTable}
+                  - arn:aws:dynamodb:us-east-2:${self:custom.accountId}:table/${self:custom.transactionTable}
+                  - arn:aws:dynamodb:us-east-2:${self:custom.accountId}:table/${self:custom.transactionTable}/stream/*
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - ${self:custom.arnApplyPayment}:*
+                  - ${self:custom.arnApplyPayment}
+                  - ${self:custom.arnUpdateAccounts}:*
+                  - ${self:custom.arnUpdateAccounts}
+                  - ${self:custom.arnGetAccount}:*
+                  - ${self:custom.arnGetAccount}
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                  - states:DescribeExecution
+                  - states:StopExecution
+                  - states:GetExecutionHistory
+                Resource: ${self:custom.arnPaymentStf}

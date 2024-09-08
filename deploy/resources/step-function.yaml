@@ -1,0 +1,64 @@
+# stepFunctions:
+stateMachines:
+  execute-payment-stf:
+    name: ${self:custom.paymentStf}
+    definition:
+      Comment: Pay Balance
+      StartAt: GetAccount
+      States:
+        GetAccount:
+          Type: Task
+          Resource: arn:aws:states:::dynamodb:getItem
+          Parameters:
+            TableName: Accounts
+            Key:
+              id:
+                S.$: "$.accountId"
+          ResultPath: "$.dynamoResult"
+          Next: ValidateAccount
+        ValidateAccount:
+          Type: Choice
+          Choices:
+          - Variable: "$.dynamoResult.Item"
+            IsPresent: true
+            Next: ExecutePayment
+          Default: Fail
+        ExecutePayment:
+          Type: Task
+          Resource: ${self:custom.arnApplyPayment}
+          Parameters:
+            # Item.$: "$.dynamoResult.Item"
+            id.$: "$.accountId"
+            amount.$: "$.amount"
+          ResultPath: "$.paymentResult"
+          Next: SaveTransaction
+          Catch:
+          - ErrorEquals:
+            - States.ALL
+            Next: Fail
+        SaveTransaction:
+          Type: Task
+          Resource: arn:aws:states:::dynamodb:putItem
+          Parameters:
+            TableName: Transaction
+            Item:
+              source:
+                S.$: "$.requestId"
+              id:
+                N.$: States.Format('{}', $.paymentResult.id)
+              data:
+                M:
+                  accountId:
+                    S.$: "$.accountId"
+                  amount:
+                    N.$: States.Format('{}', $.amount)
+          ResultPath: "$.saveResult"
+          Next: Success
+        Success:
+          Type: Succeed
+          OutputPath: "$.requestId"
+        Fail:
+            Type: Fail
+            Error: Error
+            Cause: Something was wrong
+    role: arn:aws:iam::${self:custom.accountId}:role/${self:custom.rolName}

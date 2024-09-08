@@ -1,0 +1,106 @@
+service: abono-saldo
+frameworkVersion: '3'
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline
+  - serverless-step-functions
+  - serverless-plugin-reducer
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-2
+  timeout: 30
+  memorySize: 128
+  logRetentionInDays: 1
+  stackName: PAYBALANCE-IO
+  iam:
+    role: ${self:custom.roleArn}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "lambda:InvokeFunction"
+      Resource: "*"
+  architecture: arm64
+
+  environment:
+    ACCOUNTS_TABLE_DYNAMODB: ${self:custom.accountsTable}
+    TRANSACTION_TABLE_DYNAMODB: ${self:custom.transactionTable}
+    FAKE_API_TRANSACTION: ${self:custom.fakeApiTransaction}
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    exclude:
+      - aws-sdk
+    target: node16
+    define:
+      require.resolve: undefined
+    platform: node
+    concurrency: 10
+  serverless-offline:
+    lambda:
+      load: true
+  #account
+  accountId: 123456789 # CAMBIAR POR CUENTA AWS
+  region: us-east-2
+  #dynamodb
+  accountsTable: Accounts
+  transactionTable: Transaction
+  #iam
+  rolName: PayBalanceLambdaRole
+  roleArn: arn:aws:iam::${self:custom.accountId}:role/${self:custom.rolName}
+  #lambda
+  applyPayment: execute-payment
+  updateAccounts: update-account
+  getAccount: get-account
+  arnApplyPayment: arn:aws:lambda:${self:custom.region}:${self:custom.accountId}:function:${self:custom.applyPayment}
+  arnUpdateAccounts: arn:aws:lambda:${self:custom.region}:${self:custom.accountId}:function:${self:custom.updateAccounts}
+  arnGetAccount: arn:aws:lambda:${self:custom.region}:${self:custom.accountId}:function:${self:custom.getAccount}
+  # stepFunction
+  paymentStf: execute-payment-stf
+  arnPaymentStf: arn:aws:states:${self:custom.region}:${self:custom.accountId}:stateMachine:${self:custom.paymentStf}
+
+  # external resources
+  fakeApiTransaction: https://123abc123.execute-api.us-east-2.amazonaws.com/desa # CAMBIAR POR BASE URL de API FAKE
+
+functions:
+  applyPayment:
+    handler: dist/payBalance/infrastructure/interface/PaymentHandler.processTransaction
+    name: ${self:custom.applyPayment}
+    description: Aplicar pago
+
+  updateAccounts:
+    handler: dist/payBalance/infrastructure/interface/AccountHandler.updateAccountAmount
+    name: ${self:custom.updateAccounts}
+    description: Actualizar cuenta
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionTable
+              - StreamArn
+
+  getAccount:
+    handler: dist/payBalance/infrastructure/interface/AccountHandler.getAccountById
+    name: ${self:custom.getAccount}
+    description: Obtener cuenta
+
+stepFunctions: ${file(deploy/resources/step-function.yaml)}
+
+package:
+  individually: true
+  include:
+    - node_modules/axios/**
+    - node_modules/form-data/**
+    - node_modules/proxy-from-env/**
+    - node_modules/follow-redirects/**
+
+resources:
+  - ${file(deploy/resources/dynamodb.yaml)}
+  - ${file(deploy/resources/iam.yaml)}
+  - ${file(deploy/resources/api-gateway.yaml)}
