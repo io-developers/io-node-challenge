@@ -1,7 +1,7 @@
 import { DependencyInjecttionContainer } from "../../DependencyInjecttionContainer";
 import { TransactionNotFoundError } from "../domain/TransactionNotFoundError";
 import { Request, Response, NextFunction } from "express";
-
+import axios from "axios";
 export class TransactionController {
   async getOne(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
@@ -19,9 +19,17 @@ export class TransactionController {
   }
 
   async create(req, res, next) {
-    const { source, id, data } = req.body;
+    const { id, data } = req.body;
 
     try {
+      const urlExternal = `http://localhost:3010/api/process-payment`;
+      const processPayment: any = await axios.post<{
+        message: string;
+        transactionId: string;
+      }>(urlExternal, data);
+      console.log(processPayment.data);
+      const source = processPayment.data.transactionId;
+
       await DependencyInjecttionContainer.transaction.create.execute(
         source,
         id,

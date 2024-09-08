@@ -6,7 +6,7 @@ import { TransactionController } from "./hexagonal/transaction/infraestructure/T
 const controllerAcount = new AccountController();
 const controllerTransaction = new TransactionController();
 const app = express();
-
+const PORT = 3000;
 app.use(express.json());
 
 app.get("/v1/accounts/:id", controllerAcount.getOne);
@@ -23,7 +23,6 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   return res.status(500).json({ message: "Something was wrong" });
 });
 
-// app.listen(3000, () => {
-//   console.log("Server is running on port 3000");
-// });
-export default app;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});

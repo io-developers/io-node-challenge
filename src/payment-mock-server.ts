@@ -6,9 +6,10 @@ const app = express();
 const PORT = 3010;
 app.use(express.json());
 
-app.get("/api/process-payment", (req, res) => {
-  const { success } = req.query;
-  if (success === "true") {
+app.post("/api/process-payment", (req, res) => {
+  const { accountId, amount } = req.body;
+
+  if (accountId && typeof amount === "number" && amount > 0) {
     const transactionId = uuidv4();
     return res
       .status(200)

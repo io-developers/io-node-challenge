@@ -10,7 +10,7 @@ export class TransactionSourceVo {
 
   private isValidated() {
     if (!uuidValidate(this.value)) {
-      throw new Error("el id debe ser de tipo uuid");
+      throw new Error("el source debe ser de tipo uuid");
     }
   }
 }
