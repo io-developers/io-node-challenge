@@ -4,6 +4,8 @@ import * as eventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
+import { getPowertoolsLayer } from '../../../intrastructure/layers';
+
 export class LambdaDynamodbStream extends Construct {
   constructor(
     scope: Construct,
@@ -12,6 +14,7 @@ export class LambdaDynamodbStream extends Construct {
     accountsTable: dynamodb.Table,
   ) {
     super(scope, id);
+    const powertoolsLayer = getPowertoolsLayer(this);
 
     const streamDynamoFunction = new NodejsFunction(this, 'StreamDynamoNodeJsFunction', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -20,6 +23,10 @@ export class LambdaDynamodbStream extends Construct {
       entry: `lib/services/payments/update-account/handler.ts`,
       environment: {
         ACCOUNTS_TABLE: accountsTable.tableName,
+      },
+      layers: [powertoolsLayer],
+      bundling: {
+        externalModules: ['@aws-lambda-powertools/*'],
       },
     });
 

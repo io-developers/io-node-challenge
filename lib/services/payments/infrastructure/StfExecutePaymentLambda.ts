@@ -3,6 +3,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 
+import { getPowertoolsLayer } from '../../../intrastructure/layers';
 import { MP_ACCESS_TOKEN, MP_PUBLIC_KEY, PAYER_EMAIL, PAYER_ID } from '../../common/constants';
 
 export class StfExecutePaymentLambda extends Construct {
@@ -20,6 +21,8 @@ export class StfExecutePaymentLambda extends Construct {
   ) {
     super(scope, id);
 
+    const powertoolsLayer = getPowertoolsLayer(this);
+
     const getAccountFunction = new NodejsFunction(this, 'GetAccountFunction', {
       description: 'Task1 - get-account',
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -27,6 +30,10 @@ export class StfExecutePaymentLambda extends Construct {
       entry: `lib/services/payments/get-account/handler.ts`,
       environment: {
         ACCOUNTS_TABLE: accountsTable.tableName,
+      },
+      layers: [powertoolsLayer],
+      bundling: {
+        externalModules: ['@aws-lambda-powertools/*'],
       },
     });
     accountsTable.grantReadData(getAccountFunction);
@@ -42,6 +49,10 @@ export class StfExecutePaymentLambda extends Construct {
         PAYER_ID,
         PAYER_EMAIL,
       },
+      layers: [powertoolsLayer],
+      bundling: {
+        externalModules: ['@aws-lambda-powertools/*'],
+      },
     });
 
     const saveTransactionFunction = new NodejsFunction(this, 'SaveTransactionFunction', {
@@ -51,6 +62,10 @@ export class StfExecutePaymentLambda extends Construct {
       entry: `lib/services/payments/save-transaction/handler.ts`,
       environment: {
         TRANSACTIONS_TABLE: transactionsTable.tableName,
+      },
+      layers: [powertoolsLayer],
+      bundling: {
+        externalModules: ['@aws-lambda-powertools/*'],
       },
     });
     transactionsTable.grantReadWriteData(saveTransactionFunction);
