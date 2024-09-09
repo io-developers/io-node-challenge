@@ -6,7 +6,7 @@ import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 
 export class DomainName extends Construct {
-  customDomain: apiGateway.DomainName;
+  version: apiGateway.IResource;
 
   constructor(scope: Construct, id: string, hostedZoneName: string) {
     super(scope, id);
@@ -26,7 +26,7 @@ export class DomainName extends Construct {
 
     const customDomain = new apiGateway.DomainName(this, 'CustomDomain', {
       domainName,
-      certificate: apiCertificate, // Certificado de ACM válido para el dominio
+      certificate: apiCertificate,
       endpointType: apiGateway.EndpointType.REGIONAL,
     });
 
@@ -36,6 +36,19 @@ export class DomainName extends Construct {
       target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(customDomain)),
     });
 
-    this.customDomain = customDomain;
+    const api = new apiGateway.RestApi(this, 'BankApi', {
+      restApiName: 'Bank API',
+      description: 'Backend - Bank API',
+    });
+
+    new apiGateway.BasePathMapping(this, 'BankAPIMapping', {
+      domainName: customDomain,
+      restApi: api,
+      // basePath: '',
+    });
+
+    const version = api.root.addResource('v1');
+
+    this.version = version;
   }
 }

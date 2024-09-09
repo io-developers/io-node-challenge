@@ -1,3 +1,4 @@
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
@@ -48,7 +49,7 @@ export class StepFunctionExecutePayment extends Construct {
     });
 
     const successState = new sfn.Succeed(this, 'Success', {
-      outputPath: '$',
+      outputPath: '$.task3output',
     });
 
     const isAccountValid = sfn.Condition.stringEquals('$.task1output.exists', 'Y');
@@ -69,8 +70,17 @@ export class StepFunctionExecutePayment extends Construct {
 
     const definition = getAccountTask.next(accountValid);
 
+    const logGroup = new logs.LogGroup(this, 'StateMachineLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
+
     this.usersStateMachine = new sfn.StateMachine(this, 'ExePaymentStateMachine', {
       definition,
+      logs: {
+        destination: logGroup,
+        level: sfn.LogLevel.ALL,
+        includeExecutionData: true,
+      },
       stateMachineType: sfn.StateMachineType.EXPRESS,
     });
   }

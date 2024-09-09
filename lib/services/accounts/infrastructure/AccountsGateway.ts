@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /* eslint-disable no-new */
 import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -9,23 +10,11 @@ export class AccountsGateway extends Construct {
     id: string,
     getAccountLambda: NodejsFunction,
     getAccountsLambda: NodejsFunction,
-    customDomain: apiGateway.DomainName,
+    version: apiGateway.IResource,
   ) {
     super(scope, id);
 
-    const api = new apiGateway.RestApi(this, 'AccountsApi', {
-      restApiName: 'Accounts API',
-      description: 'Backend - Accounts API',
-    });
-
-    new apiGateway.BasePathMapping(this, 'PaymentApi-mapping', {
-      domainName: customDomain,
-      restApi: api,
-      basePath: 'accounts', // Path base para esta API
-    });
-
-    // Crear un recurso de API y método para invocar la Step Function
-    const accounts = api.root.addResource('accounts');
+    const accounts = version.addResource('accounts');
     const account = accounts.addResource('{accountId}');
 
     accounts.addMethod(

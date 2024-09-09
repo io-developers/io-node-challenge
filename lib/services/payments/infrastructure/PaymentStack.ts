@@ -11,7 +11,7 @@ export class PaymentStack extends Construct {
   constructor(
     scope: Construct,
     id: string,
-    customDomain: apiGateway.DomainName,
+    version: apiGateway.IResource,
     accountsTable: dynamodb.Table,
     transactionsTable: dynamodb.Table,
   ) {
@@ -27,6 +27,6 @@ export class PaymentStack extends Construct {
 
     const stepFunc = new StepFunctionExecutePayment(this, 'StepFunctionExecutePayment', lambdas);
 
-    new PaymentGateway(this, 'PaymentGateway', stepFunc.usersStateMachine, customDomain);
+    new PaymentGateway(this, 'PaymentGateway', stepFunc.usersStateMachine, version);
   }
 }

@@ -21,7 +21,7 @@ export class IoNodeChallengeStack extends cdk.Stack {
     new PaymentStack(
       this,
       'PaymentStack',
-      domain.customDomain,
+      domain.version,
       tables.accountsTable,
       tables.transactionsTable,
     );
@@ -40,7 +40,7 @@ export class IoNodeChallengeStack extends cdk.Stack {
       'AccountsGateway',
       accountFunctions.getAccountFunction,
       accountFunctions.getAccountsFunction,
-      domain.customDomain,
+      domain.version,
     );
   }
 }

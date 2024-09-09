@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 /* eslint-disable no-new */
 import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -9,22 +10,10 @@ export class PaymentGateway extends Construct {
     scope: Construct,
     id: string,
     usersStateMachine: sfn.StateMachine,
-    customDomain: apiGateway.DomainName,
+    version: apiGateway.IResource,
   ) {
     super(scope, id);
 
-    const api = new apiGateway.RestApi(this, 'PaymentApi', {
-      restApiName: 'Payment API',
-      description: 'Backend - Payment API',
-    });
-
-    new apiGateway.BasePathMapping(this, 'PaymentApi-mapping', {
-      domainName: customDomain,
-      restApi: api,
-      basePath: 'payments', // Path base para esta API
-    });
-
-    // Permisos para que API Gateway pueda invocar la Step Function
     const role = new iam.Role(this, 'ApiGatewayStepFunctionsRole', {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
     });
@@ -44,13 +33,16 @@ export class PaymentGateway extends Construct {
             responseTemplates: {
               'application/json': `
                #set($context.responseOverride.header.Content-Type = "application/json")
-                
                 #set($inputRoot = $input.path('$'))
+                #set($output = $inputRoot.output)
+                #set($response = $util.parseJson($output))
+
                 #if($inputRoot.status == "SUCCEEDED")
-                  #set($message = $output.message)
-                  #set($transactionId = $output.transactionId)
-                  #if($inputRoot.output && $inputRoot.output != "{}")
-                    $inputRoot.output
+                  #if($response && $response.transac_ok == "Y")
+                    {
+                      "message": "$response.message",
+                      "transactionId": "$response.transactionId"
+                    }
                   #else
                     {"message": "Step Function completed successfully"}
                   #end
@@ -70,17 +62,16 @@ export class PaymentGateway extends Construct {
         ],
         requestTemplates: {
           'application/json': `{
-        "input": "$util.escapeJavaScript($input.body)",
-        "stateMachineArn": "${usersStateMachine.stateMachineArn}"
-      }`,
+            "input": "$util.escapeJavaScript($input.body)",
+            "stateMachineArn": "${usersStateMachine.stateMachineArn}"
+          }`,
         },
       },
     });
 
-    // Crear un recurso de API y método para invocar la Step Function
-    const stepFunctionResource = api.root.addResource('payment');
+    const payments = version.addResource('payments');
 
-    stepFunctionResource.addMethod('POST', stepFunctionIntegration, {
+    payments.addMethod('POST', stepFunctionIntegration, {
       methodResponses: [{ statusCode: '200' }],
     });
   }
