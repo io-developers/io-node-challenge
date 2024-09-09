@@ -1,20 +1,10 @@
-.terraform/
-.shelltool/
-makefiles/
-passwd
-
-.npm/
-.esbuild/
-.serverlessrc
-.npmrc
-.config/
-.yarn/
-.cache/
+*.js
+!jest.config.js
+*.d.ts
 node_modules
-**/node_modules
-.dccache
-.env
-coverage/
-.vscode
 
-dist/
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+.env
+.DS_Store
