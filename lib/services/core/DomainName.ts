@@ -1,13 +1,12 @@
+/* eslint-disable no-new */
+import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
 
 export class DomainName extends Construct {
-  hostedZone: route53.HostedZone;
-
-  domainName: string;
-
-  apicertificate: acm.Certificate;
+  customDomain: apiGateway.DomainName;
 
   constructor(scope: Construct, id: string, hostedZoneName: string) {
     super(scope, id);
@@ -25,8 +24,18 @@ export class DomainName extends Construct {
       validation: acm.CertificateValidation.fromDns(hostedZone),
     });
 
-    this.hostedZone = hostedZone;
-    this.apicertificate = apiCertificate;
-    this.domainName = domainName;
+    const customDomain = new apiGateway.DomainName(this, 'CustomDomain', {
+      domainName,
+      certificate: apiCertificate, // Certificado de ACM válido para el dominio
+      endpointType: apiGateway.EndpointType.REGIONAL,
+    });
+
+    new route53.ARecord(this, 'ApiDomainAliasRecord', {
+      zone: hostedZone,
+      recordName: 'api',
+      target: route53.RecordTarget.fromAlias(new route53Targets.ApiGatewayDomain(customDomain)),
+    });
+
+    this.customDomain = customDomain;
   }
 }
