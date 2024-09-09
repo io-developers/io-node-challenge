@@ -4,16 +4,19 @@
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es2016",
+    "target": "es2020",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",     //        ./src
+    "sourceMap": true,
     "moduleResolution": "node",
-    "lib": ["es2016", "ES2019", "DOM"],
-    "types": ["reflect-metadata", "aws-lambda", "jest", "node"],
+    "lib": ["es2016", "ES2019", "DOM", "ESNext"],
+    "allowJs": true,
+    //"types": ["reflect-metadata", "aws-lambda", "jest", "node"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "skipLibCheck": true,                           /* Skip type checking of declaration files. */
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src"], //     "./**/*.ts"
+  "exclude": ["node_modules","dist", "coverage"]
 }

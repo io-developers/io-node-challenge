@@ -1,0 +1,204 @@
+service: io-node-challenge
+
+provider:
+  name: aws
+  runtime: nodejs18.x  # Utilizar la última versión de Node.js soportada
+  region: us-east-1
+  environment:
+    ACCOUNTS_TABLE: ${self:custom.accountsTable}
+    TRANSACTION_TABLE: ${self:custom.transactionsTable}
+    MOCK_API_URL: https://q7sfxpg9mg.execute-api.us-east-1.amazonaws.com/dev/mock/payments
+
+
+plugins:
+  - serverless-step-functions
+  - serverless-plugin-typescript
+  - serverless-iam-roles-per-function
+
+# Definir los recursos de la aplicación (tablas DynamoDB)
+resources:
+  Resources:
+    AccountsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.accountsTable}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.transactionsTable}
+        AttributeDefinitions:
+          - AttributeName: source
+            AttributeType: S
+          - AttributeName: id
+            AttributeType: N
+        KeySchema:
+          - AttributeName: source
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+
+# Definir funciones Lambda
+functions:
+  GetAccount:
+    handler: src/functions/get-account.handler
+    events:
+      - http:
+          path: v1/accounts/{accountId}
+          method: get
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { "Fn::GetAtt": [AccountsTable, Arn] }
+
+  ValidateAccountLambdaFunction:
+    handler: src/handlers/validate-account.handler
+    memorySize: 128
+    timeout: 10
+    environment:
+      ACCOUNTS_TABLE: ${self:custom.accountsTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { "Fn::GetAtt": [AccountsTable, Arn] }
+
+  ExecutePaymentLambdaFunction:
+    handler: src/functions/execute-payment.handler
+    memorySize: 128
+    timeout: 10
+    events:
+      - http:
+          path: v1/payments  # Ruta principal para realizar pagos
+          method: post
+          cors: true
+    environment:
+      MOCK_API_URL: ${self:provider.environment.MOCK_API_URL}
+      TRANSACTION_TABLE: ${self:custom.transactionsTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource:
+          - { "Fn::GetAtt": [TransactionsTable, Arn] }
+
+  SaveTransactionLambdaFunction:
+    handler: src/handlers/save-transaction.handler
+    memorySize: 128
+    timeout: 10
+    environment:
+      TRANSACTION_TABLE: ${self:custom.transactionsTable}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource:
+          - { "Fn::GetAtt": [TransactionsTable, Arn] }
+
+  UpdateAccountLambdaFunction:
+    handler: src/functions/update-account.handler
+    memorySize: 128
+    timeout: 10
+    environment:
+      ACCOUNTS_TABLE: ${self:custom.accountsTable}
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionsTable
+              - StreamArn
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource:
+          - { "Fn::GetAtt": [AccountsTable, Arn] }
+
+  mockPaymentAPI:
+    handler: src/functions/mock-payment-api.handler
+    memorySize: 128
+    timeout: 10
+    events:
+      - http:
+          path: mock/payments
+          method: post
+
+#Definir las máquinas de estado de Step Functions
+stepFunctions:
+  stateMachines:
+    paymentProcessStateMachine:
+      name: PaymentProcessStateMachine
+      definition:
+        Comment: "State machine to process payments and update accounts"
+        StartAt: GetAccount
+        States:
+          GetAccount:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ ValidateAccountLambdaFunction, Arn ]
+            Next: CheckAccount
+
+          CheckAccount:
+            Type: Choice
+            Choices:
+              - Variable: "$.accountFound"
+                BooleanEquals: true
+                Next: ExecutePayment
+            Default: FailState
+
+          ExecutePayment:
+            Type: Task
+            Resource: 
+              Fn::GetAtt: [ ExecutePaymentLambdaFunction, Arn ]
+              
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                Next: FailState
+            Next: SaveTransaction
+
+          SaveTransaction:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [ SaveTransactionLambdaFunction, Arn ]
+            Next: SuccessState
+
+          SuccessState:
+            Type: Succeed
+
+          FailState:
+            Type: Fail
+            Cause: "Account not found or payment failed"
+            Error: "ValidationError"
+
+
+# Agregar permisos para que las Step Functions puedan invocar Lambdas
+  role:
+    statements:
+      - Effect: Allow
+        Action:
+          - lambda:InvokeFunction
+        Resource:
+          - Fn::GetAtt: [ ValidateAccountLambdaFunction, Arn ]
+          - Fn::GetAtt: [ ExecutePaymentLambdaFunction, Arn ]
+          - Fn::GetAtt: [ SaveTransactionLambdaFunction, Arn ]
+
+# Configuración custom para las tablas
+custom:
+  accountsTable: Accounts
+  transactionsTable: Transactions
