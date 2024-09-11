@@ -1,0 +1,68 @@
+{
+  "StartAt": "GetAccount",
+  "States": {
+    "GetAccount": {
+      "Type": "Task",
+      "Parameters": {
+        "TableName": "Account",
+        "KeyConditionExpression": "id = :id",
+        "ExpressionAttributeValues": {
+          ":id": {
+            "S.$": "$.accountId"
+          }
+        }
+      },
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:query",
+      "ResultPath": "$.getAccount",      
+      "Next": "ValidateUser?"
+    },
+    "ValidateUser?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.getAccount.Count",
+          "NumericEquals": 1,
+          "Next": "ExecutePayment"
+        }
+      ],
+      "Default": "Fail"
+    },
+    "Fail": {
+      "Type": "Fail",
+      "Cause": "User Not exits"
+    },
+    "ExecutePayment": {
+      "Type": "Task",
+      "Resource":"${ExecutePaymentArn}",
+      "InputPath": "$",
+      "Parameters": {
+        "accountId.$": "$.accountId",
+        "amount.$": "$.amount"
+      },
+      "ResultPath": "$.result",
+      "Next": "SaveTransaccion"
+    },
+
+    "SaveTransaccion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+     
+      "Parameters": {
+        "TableName": "Transaction",
+        "Item": {
+          "id": {
+            "S.$": "$.result.id"
+          },
+          "source": {
+            "S.$": "$.accountId"
+          },
+          "data": {
+            "S.$": "States.JsonToString($.result.data)"
+          }
+        }
+      },
+      "ResultPath": "$.saveTransaccion",
+      "End": true
+    }
+  }
+}
