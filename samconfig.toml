@@ -1,0 +1,11 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "sam-app-rob"
+resolve_s3 = true
+s3_prefix = "sam-app-rob"
+region = "us-east-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+parameter_overrides = "PaymentGatewayName=\"payment-gateway\" StepFunctionName=\"execute-payment-stf\" ExecutePaymentFunctionName=\"execute-payment-fn\" UpdatePaymentFunctionName=\"update-account-fn\" ArnDynamoDBTableStream=\"arn:aws:dynamodb:us-east-2:361769566249:table/Transaction/stream/2024-09-09T16:50:03.138\" CheckAccountFunctionName=\"check-bank-account-fn\""
+image_repositories = []
