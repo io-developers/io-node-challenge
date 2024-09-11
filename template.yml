@@ -1,0 +1,219 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+
+  PaymentGatewayName:
+    Type: String
+    Default: payment-gateway
+  StepFunctionName:
+    Type: String
+    Default: execute-payment-stf
+  ExecutePaymentFunctionName:
+    Type: String
+    Default: execute-payment-fn
+  UpdatePaymentFunctionName:
+    Type: String
+    Default: update-account-fn
+  ArnDynamoDBTableStream:
+    Type: String
+    Default: arn:aws:dynamodb:us-east-2:361769566249:table/Transaction/stream/2024-09-09T16:50:03.138
+  CheckAccountFunctionName:
+    Type: String
+    Default: check-bank-account-fn
+
+Resources:
+  PaymentGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Ref PaymentGatewayName
+      StageName: v1
+
+  SAMLogs:
+    Type: AWS::Logs::LogGroup
+
+  ValidationStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: EXPRESS
+      Name: !Ref StepFunctionName
+      DefinitionUri: src/execute-payment-stf/validateAccount.asl.json
+      DefinitionSubstitutions:
+        ExecutePaymentArn: !GetAtt ExecutePayment.Arn
+      Events:
+        ValidationApiEvent:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /payments
+            RestApiId: !Ref PaymentGateway
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt SAMLogs.Arn
+        IncludeExecutionData: true
+        Level: ALL
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ExecutePayment
+        - CloudWatchLogsFullAccess
+
+        - Statement:
+              Effect: "Allow"
+              Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams  
+              Resource: "*"
+  
+  ExecutePayment:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref ExecutePaymentFunctionName
+      CodeUri: src/execute-payment-fn/
+      Handler: executePaymentHandler.handler
+      Runtime: nodejs20.x
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - executePaymentHandler.ts
+          
+  UpdateAccount:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref UpdatePaymentFunctionName
+      CodeUri: src/update-account-fn/
+      Handler: updateAccountHandler.handler
+      Runtime: nodejs20.x
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - Statement:
+              Effect: "Allow"
+              Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams  
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents                  
+              Resource: "*"
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - updateAccountHandler.ts
+      
+  DynamoDBTableStream:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 2
+      Enabled: True
+      EventSourceArn: !Ref ArnDynamoDBTableStream
+      FunctionName: !GetAtt UpdateAccount.Arn
+      FilterCriteria:
+        Filters:
+          - Pattern: '{"eventName":["INSERT"]}'
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+      MaximumBatchingWindowInSeconds: 10
+      MaximumRetryAttempts: 2
+      ParallelizationFactor: 1
+      StartingPosition: LATEST
+
+  CheckAccount:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref CheckAccountFunctionName
+      CodeUri: src/check-bank-account/
+      Handler: checkAccountHandler.handler
+      Runtime: nodejs20.x
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        CheckAccountApi:
+          Type: Api
+          Properties:
+            Path: /accounts
+            Method: get
+            RestApiId: !Ref PaymentGateway
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+        - checkAccountHandler.ts   
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaCloudWatchLogsDynamoDBPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Permisos para escribir logs en CloudWatch
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:GetItem
+                Resource: !GetAtt AccountTableDynamoDB.Arn
+
+  # AccountTableDynamoDB:
+  #   Type: 'AWS::DynamoDB::Table'
+  #   Properties:
+  #     TableName: 'Account'
+  #     AttributeDefinitions:
+  #       - AttributeName: 'id'
+  #         AttributeType: 'S'
+  #       - AttributeName: 'amount'
+  #         AttributeType: 'N'
+  #     KeySchema:
+  #       - AttributeName: 'id'
+  #         KeyType: 'HASH'
+  #       - AttributeName: 'amount'
+  #         KeyType: 'RANGE'
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: 2
+  #       WriteCapacityUnits: 2
+
+
+
+Outputs:
+  ValidationStateMachineArn:
+    Description: "payment state machine ARN"
+    Value: !Ref ValidationStateMachine
+  ValidationAPIUrl:
+    Description: "url to call the validation state machine"
+    Value: !Sub https://${PaymentGateway}.execute-api.${AWS::Region}.amazonaws.com/
+
+
+
