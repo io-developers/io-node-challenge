@@ -1,0 +1,1 @@
+export { paymentTransaction } from './controller/paymentsController';

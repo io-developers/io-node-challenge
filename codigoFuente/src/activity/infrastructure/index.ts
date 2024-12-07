@@ -1,0 +1,1 @@
+export { activityProcess } from './activityController';
