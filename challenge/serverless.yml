@@ -1,0 +1,119 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: challenge
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: io-node-challenge
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: challenge
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+functions:
+  validate-user:
+    handler: src/handlers/validate-user/validate-user/validateUser
+
+  execute-payments:
+    handler: src/handlers/exec-payments/exec-payments/executePayments
+    events:
+      - http:
+          path: /v1/payments
+          method: post
+          cors: true
+
+  register-activity:
+    handler: src/handlers/register-activity/register-activity/registerActivity
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt:
+              - TransactionsTable
+              - StreamArn
+
+  get-transaction:
+    handler: src/handlers/get-transactions/get-transactions/getTransaction
+    events:
+      - http:
+          path: /v1/transactions
+          method: get
+          request:
+            parameters:
+              querystrings:
+                transactionId: true
+
+plugins:
+  - serverless-step-functions
+  - serverless-dynamodb-local
+  - serverless-offline
+
+custom:
+  serverless-dynamodb:
+    start:
+      port: 8000
+      docker: false
+
+resources:
+  Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: users
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    TransactionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: transactions
+        AttributeDefinitions:
+          - AttributeName: transactionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: transactionId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        StreamSpecification:
+          StreamViewType: NEW_IMAGE
+    ActivityTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: activity
+        AttributeDefinitions:
+          - AttributeName: activityId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: activityId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+stepFunctions:
+  stateMachines:
+    PaymentProcess:
+      definition:
+        StartAt: ValidateUser
+        States:
+          ValidateUser:
+            Type: Task
+            Resource:
+              Fn::GetAtt:
+                - ValidateUserLambdaFunction
+                - Arn
+            Next: ExecutePayment
+          ExecutePayment:
+            Type: Task
+            Resource:
+              Fn::GetAtt:
+                - ExecutePaymentsLambdaFunction
+                - Arn
+            End: true
